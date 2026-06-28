@@ -15,6 +15,11 @@ plugins/            Codex-native BetterCodex skill pack
 
 Users install the desktop client. Companion hosts the web and API.
 
+Live hosted Store:
+
+- Web: https://bettercodex-web.companion-inc.workers.dev
+- API: https://bettercodex-web.companion-inc.workers.dev/api/addons
+
 ## Desktop
 
 ```bash
@@ -29,7 +34,7 @@ Desktop addons live in:
 ~/.codex/bettercodex/themes
 ```
 
-Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Store fetches the hosted Store API and installs selected files into those folders.
+Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Store panel fetches the hosted Store API and installs selected files into those folders. The panel inherits Codex token colors, borders, typography, and surfaces so it reads as part of Codex rather than as a separate website frame.
 
 ## Hosted Web/API
 
@@ -39,6 +44,12 @@ npm run web:dry-run
 ```
 
 `apps/web` is the public website. `apps/api` is the Cloudflare Worker that serves `/api/addons`, `/api/addons/:id`, and `/api/submit`.
+
+The desktop Store panel uses the hosted API by default:
+
+```text
+https://bettercodex-web.companion-inc.workers.dev/api/addons
+```
 
 ## Codex Skill Pack
 

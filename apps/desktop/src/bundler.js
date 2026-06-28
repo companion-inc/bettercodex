@@ -76,6 +76,7 @@ function slugify(name) {
 }
 
 function quitBundle(bundleId, destination) {
+  const ownPids = new Set([process.pid, process.ppid].filter(Boolean).map(String));
   childProcess.spawnSync("/usr/bin/osascript", [
     "-e",
     `tell application id "${bundleId}" to quit`,
@@ -89,7 +90,7 @@ function quitBundle(bundleId, destination) {
       continue;
     }
     const match = /^\s*(\d+)/.exec(line);
-    if (match) {
+    if (match && !ownPids.has(match[1])) {
       try {
         process.kill(Number(match[1]), "SIGKILL");
       } catch {}

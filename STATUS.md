@@ -4,12 +4,13 @@
 
 BetterCodex is organized as a single repo with separate runtimes.
 
-- `apps/desktop`: user-installed Codex patcher and in-Codex Store.
+- `apps/desktop`: user-installed Codex patcher and in-Codex Store panel using Codex token styling.
 - `apps/web`: hosted public site.
 - `apps/api`: hosted Store API.
 - `packages/catalog`: shared schema and sample catalog.
 - `packages/addons`: example addons and author fixtures.
 - `plugins/bettercodex-community`: Codex-native skills for addon authors.
+- Hosted Store: `https://bettercodex-web.companion-inc.workers.dev`.
 
 The product vocabulary is:
 
@@ -27,15 +28,19 @@ npm test
 python3 /Users/advaitpaliwal/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/bettercodex-community
 npm run web:dry-run
 npm run desktop:status
-npm run desktop -- bundle --name Smoke --destination /tmp/Codex-BetterCodex-Monorepo-Smoke.app --replace --store https://bettercodex.companion.ai/api/addons
+npm run desktop -- bundle --name Smoke --destination /tmp/Codex-BetterCodex-Monorepo-Smoke.app --replace
 npm run desktop -- status --app /tmp/Codex-BetterCodex-Monorepo-Smoke.app
+curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
 ```
 
 Results:
 
 - Syntax check passed.
-- Test suite passed: 16 tests.
+- Test suite passed: 17 tests.
 - Codex-native skill pack validation passed.
 - Cloudflare Worker/static-assets dry-run passed.
+- Cloudflare Worker deployed: `https://bettercodex-web.companion-inc.workers.dev`.
+- Hosted API responded with schema version `1` and seed addons `hello-codex,focus-contrast`.
 - Official `/Applications/Codex.app` stayed unmodified: loader `no`, ASAR integrity `yes`, codesign `yes`.
 - Disposable `/tmp/Codex-BetterCodex-Monorepo-Smoke.app` patched successfully: loader `yes`, ASAR integrity `yes`, codesign `yes`.
+- Smoke runtime config points at `https://bettercodex-web.companion-inc.workers.dev/api/addons`.

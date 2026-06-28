@@ -8,4 +8,4 @@ directory = "./apps/web"
 
 [vars]
 GITHUB_REPO = "companion-inc/bettercodex"
-STORE_ORIGIN = "https://bettercodex.companion.ai"
+STORE_ORIGIN = "https://bettercodex-web.companion-inc.workers.dev"
