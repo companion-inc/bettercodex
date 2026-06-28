@@ -1,0 +1,20 @@
+{
+  "name": "bettercodex",
+  "interface": {
+    "displayName": "BetterCodex"
+  },
+  "plugins": [
+    {
+      "name": "bettercodex-community",
+      "source": {
+        "source": "local",
+        "path": "./plugins/bettercodex-community"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="BetterCodex">
+  <rect width="128" height="128" rx="28" fill="#101314"/>
+  <path d="M31 38h44c13 0 22 8 22 20 0 6-3 12-8 15 7 3 11 9 11 17 0 13-10 22-25 22H31V38Zm20 18v12h20c4 0 7-2 7-6s-3-6-7-6H51Zm0 29v12h23c4 0 7-2 7-6s-3-6-7-6H51Z" fill="#58c99f"/>
+  <path d="M33 22h62v10H33V22Zm0 74h22v10H33V96Zm45 0h17v10H78V96Z" fill="#eef5f2"/>
+</svg>

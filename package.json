@@ -1,0 +1,22 @@
+{
+  "name": "bettercodex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BetterCodex client, in-app Store, hosted web, and hosted API.",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test",
+    "desktop": "node apps/desktop/bin/bettercodex.js",
+    "desktop:status": "node apps/desktop/bin/bettercodex.js status",
+    "web:dev": "npm exec --yes --package=wrangler -- wrangler dev",
+    "web:dry-run": "npm exec --yes --package=wrangler -- wrangler deploy --dry-run --outdir /tmp/bettercodex-web-dry-run"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

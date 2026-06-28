@@ -1,0 +1,32 @@
+{
+  "name": "bettercodex-community",
+  "version": "0.1.0",
+  "description": "Skills for authoring and installing BetterCodex community mods.",
+  "author": {
+    "name": "Companion",
+    "email": "bettercodex@companion.ai",
+    "url": "https://github.com/companion-inc"
+  },
+  "homepage": "https://github.com/companion-inc/bettercodex",
+  "repository": "https://github.com/companion-inc/bettercodex",
+  "license": "MIT",
+  "keywords": ["bettercodex", "codex", "store", "mods", "skills"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "BetterCodex Community",
+    "shortDescription": "Author and install BetterCodex mods.",
+    "longDescription": "Create desktop plugins, desktop themes, and Codex skills that can be submitted to the BetterCodex Store.",
+    "developerName": "Companion",
+    "category": "Productivity",
+    "capabilities": ["Write", "Interactive"],
+    "websiteURL": "https://github.com/companion-inc/bettercodex",
+    "privacyPolicyURL": "https://github.com/companion-inc/bettercodex",
+    "termsOfServiceURL": "https://github.com/companion-inc/bettercodex",
+    "defaultPrompt": [
+      "Create a BetterCodex plugin",
+      "Create a BetterCodex theme",
+      "Package a Codex skill for BetterCodex"
+    ],
+    "brandColor": "#36A481"
+  }
+}
