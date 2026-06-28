@@ -1,9 +1,9 @@
 import {validateSubmission} from "../../packages/catalog/src/index.mjs";
 
-// The marketplace is community-owned: its contents come from the bettercodex-store
+// The marketplace is community-owned: its contents come from the bettercodex-mods
 // repo, where authors add mods via pull request. We read its generated catalog.json.
 const STORE_CATALOG_URL =
-  "https://raw.githubusercontent.com/companion-inc/bettercodex-store/main/catalog.json";
+  "https://raw.githubusercontent.com/companion-inc/bettercodex-mods/main/catalog.json";
 
 async function fetchStoreCatalog() {
   try {
@@ -33,7 +33,7 @@ export default {
     }
 
     if (url.pathname === "/api/health") {
-      return json({ok: true, service: "bettercodex-store"});
+      return json({ok: true, service: "bettercodex-mods"});
     }
 
     if (url.pathname === "/api/addons" && request.method === "GET") {
@@ -109,7 +109,7 @@ async function createSubmissionIssue(env, submission) {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${env.GITHUB_TOKEN}`,
       "content-type": "application/json",
-      "user-agent": "bettercodex-store",
+      "user-agent": "bettercodex-mods",
       "x-github-api-version": "2022-11-28",
     },
     body: JSON.stringify({

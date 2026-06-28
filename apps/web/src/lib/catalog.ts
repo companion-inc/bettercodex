@@ -35,8 +35,8 @@ export async function loadAddons(): Promise<Addon[]> {
 }
 
 export const REPO_URL = "https://github.com/companion-inc/bettercodex";
-export const STORE_URL = "https://github.com/companion-inc/bettercodex-store";
-export const DOCS_URL = "https://github.com/companion-inc/bettercodex-store/tree/main/docs";
-// Submitting a mod is a pull request to the community store, not an issue.
+export const STORE_URL = "https://github.com/companion-inc/bettercodex-mods";
+export const DOCS_URL = "https://github.com/companion-inc/bettercodex-mods/tree/main/docs";
+// Submitting a mod is a pull request to the community mods repo, not an issue.
 export const SUBMIT_URL =
-  "https://github.com/companion-inc/bettercodex-store/blob/main/CONTRIBUTING.md";
+  "https://github.com/companion-inc/bettercodex-mods/blob/main/CONTRIBUTING.md";

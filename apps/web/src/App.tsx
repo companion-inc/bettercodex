@@ -122,7 +122,7 @@ function EmptyState() {
       <h3 className="text-lg font-medium text-foreground">No mods yet</h3>
       <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
         Be the first to publish a plugin, theme, or skill for Codex. Mods are
-        added by opening a pull request to the community store — it's validated
+        added by opening a pull request to the community mods repo — it's validated
         by CI and reviewed on GitHub.
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
