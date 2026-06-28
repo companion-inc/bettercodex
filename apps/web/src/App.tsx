@@ -107,7 +107,7 @@ function SubmitTile() {
       <span className="flex size-10 items-center justify-center rounded-[10px] bg-secondary">
         <Plus className="size-5" />
       </span>
-      <span className="text-[14px] font-medium">Submit your mod</span>
+      <span className="text-[14px] font-medium">Submit your plugin</span>
       <span className="text-[12px]">Plugins and themes welcome</span>
     </a>
   );
@@ -119,16 +119,16 @@ function EmptyState() {
       <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
         <PackageOpen className="size-7" />
       </span>
-      <h3 className="text-lg font-medium text-foreground">No mods yet</h3>
+      <h3 className="text-lg font-medium text-foreground">No plugins yet</h3>
       <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
-        Be the first to publish a plugin, theme, or skill for Codex. Mods are
-        added by opening a pull request to the community mods repo — it's validated
+        Be the first to publish a plugin, theme, or skill for Codex. Plugins are
+        added by opening a pull request to the community plugins repo — it's validated
         by CI and reviewed on GitHub.
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Button asChild>
           <a href={SUBMIT_URL}>
-            <Plus className="size-4" /> Submit the first mod
+            <Plus className="size-4" /> Submit the first plugin
           </a>
         </Button>
         <Button asChild variant="outline" className="border-border">
@@ -178,8 +178,8 @@ export default function App() {
             <span className="text-[15px] font-medium">BetterCodex</span>
           </a>
           <nav className="flex items-center gap-5 text-sm text-muted-foreground">
-            <a href="#mods" className="text-foreground transition-colors hover:text-foreground">
-              Mods
+            <a href="#plugins" className="text-foreground transition-colors hover:text-foreground">
+              Plugins
             </a>
             <a href={DOCS_URL} className="transition-colors hover:text-foreground">
               Docs
@@ -200,7 +200,7 @@ export default function App() {
             Plugins and themes for Codex
           </h1>
           <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-            A community marketplace of mods for the Codex desktop app. Browse,
+            A community marketplace of plugins for the Codex desktop app. Browse,
             install in one click, and build your own.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -211,13 +211,13 @@ export default function App() {
             </Button>
             <Button asChild variant="outline" className="border-border">
               <a href={SUBMIT_URL}>
-                <Plus className="size-4" /> Submit a mod
+                <Plus className="size-4" /> Submit a plugin
               </a>
             </Button>
           </div>
         </section>
 
-        <section id="mods" className="pb-20">
+        <section id="plugins" className="pb-20">
           {addons !== null && addons.length > 0 && (
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] flex-1">
@@ -225,7 +225,7 @@ export default function App() {
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search mods"
+                placeholder="Search plugins"
                 className="h-10 border-border bg-card pl-9"
               />
             </div>
@@ -262,12 +262,12 @@ export default function App() {
           )}
 
           {addons === null ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">Loading mods…</p>
+            <p className="py-16 text-center text-sm text-muted-foreground">Loading plugins…</p>
           ) : addons.length === 0 ? (
             <EmptyState />
           ) : filtered.length === 0 ? (
             <p className="py-16 text-center text-sm text-muted-foreground">
-              No mods match your search.
+              No plugins match your search.
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -282,13 +282,13 @@ export default function App() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-8 text-[13px] text-muted-foreground">
-          <span>A BetterDiscord-style mod platform for Codex.</span>
+          <span>A BetterDiscord-style plugin platform for Codex.</span>
           <div className="flex items-center gap-5">
             <a href={DOCS_URL} className="transition-colors hover:text-foreground">
               Docs
             </a>
             <a href={SUBMIT_URL} className="transition-colors hover:text-foreground">
-              Submit a mod
+              Submit a plugin
             </a>
             <a href={REPO_URL} className="transition-colors hover:text-foreground">
               GitHub
