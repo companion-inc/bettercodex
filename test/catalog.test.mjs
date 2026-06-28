@@ -11,15 +11,14 @@ import {
 
 test("catalog validates sample addons", () => {
   const addons = validateCatalog(sampleCatalog);
-  assert.equal(addons.length, 2);
-  assert.equal(addons[0].type, "plugin");
+  assert.equal(addons.length, 0);
 });
 
 test("catalogResponse wraps addons with schema metadata", () => {
   const response = catalogResponse(sampleCatalog);
   assert.equal(response.schemaVersion, 1);
   assert.ok(response.generatedAt);
-  assert.equal(response.addons[1].id, "focus-contrast");
+  assert.equal(response.addons.length, 0);
 });
 
 test("submission validation requires raw GitHub downloads", () => {

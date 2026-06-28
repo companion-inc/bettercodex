@@ -1,8 +1,21 @@
-import {
-  catalogResponse,
-  sampleCatalog,
-  validateSubmission,
-} from "../../packages/catalog/src/index.mjs";
+import {validateSubmission} from "../../packages/catalog/src/index.mjs";
+
+// The marketplace is community-owned: its contents come from the bettercodex-store
+// repo, where authors add mods via pull request. We read its generated catalog.json.
+const STORE_CATALOG_URL =
+  "https://raw.githubusercontent.com/companion-inc/bettercodex-store/main/catalog.json";
+
+async function fetchStoreCatalog() {
+  try {
+    const response = await fetch(STORE_CATALOG_URL, {cf: {cacheTtl: 300, cacheEverything: true}});
+    if (!response.ok) return [];
+    const data = await response.json();
+    const addons = Array.isArray(data) ? data : data.addons;
+    return Array.isArray(addons) ? addons : [];
+  } catch (error) {
+    return [];
+  }
+}
 
 const jsonHeaders = {
   "access-control-allow-headers": "content-type",
@@ -24,13 +37,14 @@ export default {
     }
 
     if (url.pathname === "/api/addons" && request.method === "GET") {
-      return json(catalogResponse(sampleCatalog));
+      const addons = await fetchStoreCatalog();
+      return json({schemaVersion: 1, generatedAt: new Date().toISOString(), addons});
     }
 
     if (url.pathname.startsWith("/api/addons/") && request.method === "GET") {
       const id = decodeURIComponent(url.pathname.slice("/api/addons/".length));
-      const addons = catalogResponse(sampleCatalog).addons;
-      const addon = addons.find((item) => item.id === id || item.name.toLowerCase() === id.toLowerCase());
+      const addons = await fetchStoreCatalog();
+      const addon = addons.find((item) => item.id === id || (item.name || "").toLowerCase() === id.toLowerCase());
       return addon ? json(addon) : json({error: "not_found"}, 404);
     }
 
@@ -39,7 +53,17 @@ export default {
     }
 
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const response = await env.ASSETS.fetch(request);
+      // Never let the browser cache HTML, or a new deploy keeps showing the old
+      // page (it would reference last build's hashed assets). Hashed JS/CSS stay
+      // immutable and cache-busted by their filename.
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        const headers = new Headers(response.headers);
+        headers.set("cache-control", "no-cache, must-revalidate");
+        return new Response(response.body, {status: response.status, headers});
+      }
+      return response;
     }
 
     return json({error: "not_found"}, 404);

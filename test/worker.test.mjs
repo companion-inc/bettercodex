@@ -8,7 +8,8 @@ test("Worker serves catalog response", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.schemaVersion, 1);
-  assert.equal(payload.addons[0].id, "hello-codex");
+  // Catalog contents come from the bettercodex-store repo at runtime; assert the shape.
+  assert.ok(Array.isArray(payload.addons));
 });
 
 test("Worker validates submissions without GitHub token", async () => {

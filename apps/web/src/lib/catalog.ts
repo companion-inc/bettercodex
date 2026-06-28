@@ -1,68 +1,42 @@
-export const ADDON_TYPES = ["plugin", "theme", "skill"] as const;
+import seed from "./catalog.seed.json";
 
-export type AddonType = (typeof ADDON_TYPES)[number];
+export type AddonType = "plugin" | "theme" | "skill";
 
-export type Addon = {
+export interface Addon {
   id: string;
   type: AddonType;
   name: string;
   description: string;
   author: string;
-  version: string;
-  tags: string[];
-  downloads: number;
-  likes: number;
-  fileName: string;
-  downloadUrl: string;
-  sourceUrl: string | null;
-  homepageUrl: string | null;
-  thumbnailUrl: string | null;
-  updatedAt: string;
-};
+  version?: string;
+  tags?: string[];
+  downloads?: number;
+  likes?: number;
+  downloadUrl?: string;
+  sourceUrl?: string;
+  homepageUrl?: string;
+  updatedAt?: string;
+}
 
-export type CatalogResponse = {
-  generatedAt: string;
-  schemaVersion: number;
-  addons: Addon[];
-};
+const SEED = seed as Addon[];
 
-export const fallbackCatalog: Addon[] = [
-  {
-    id: "hello-codex",
-    type: "plugin",
-    name: "Hello Codex",
-    description: "Adds a small Store-installed greeting action.",
-    author: "Companion",
-    version: "0.1.0",
-    tags: ["utility", "developer"],
-    downloads: 0,
-    likes: 0,
-    fileName: "hello-codex.plugin.js",
-    downloadUrl:
-      "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/plugins/hello-codex.plugin.js",
-    sourceUrl:
-      "https://github.com/companion-inc/bettercodex/tree/main/packages/addons/examples/plugins/hello-codex.plugin.js",
-    homepageUrl: "https://github.com/companion-inc/bettercodex",
-    thumbnailUrl: "/assets/bettercodex-mark.svg",
-    updatedAt: "2026-06-28T00:00:00.000Z",
-  },
-  {
-    id: "focus-contrast",
-    type: "theme",
-    name: "Focus Contrast",
-    description: "Improves focus rings and active control contrast.",
-    author: "Companion",
-    version: "0.1.0",
-    tags: ["contrast", "editor"],
-    downloads: 0,
-    likes: 0,
-    fileName: "focus-contrast.theme.css",
-    downloadUrl:
-      "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/themes/focus-contrast.theme.css",
-    sourceUrl:
-      "https://github.com/companion-inc/bettercodex/tree/main/packages/addons/examples/themes/focus-contrast.theme.css",
-    homepageUrl: "https://github.com/companion-inc/bettercodex",
-    thumbnailUrl: "/assets/bettercodex-mark.svg",
-    updatedAt: "2026-06-28T00:00:00.000Z",
-  },
-];
+export async function loadAddons(): Promise<Addon[]> {
+  try {
+    const res = await fetch("/api/addons", {headers: {"cache-control": "no-cache"}});
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.addons;
+      if (Array.isArray(list)) return list as Addon[];
+    }
+  } catch {
+    // No Worker in local dev — fall back to the bundled seed.
+  }
+  return SEED;
+}
+
+export const REPO_URL = "https://github.com/companion-inc/bettercodex";
+export const STORE_URL = "https://github.com/companion-inc/bettercodex-store";
+export const DOCS_URL = "https://github.com/companion-inc/bettercodex-store/tree/main/docs";
+// Submitting a mod is a pull request to the community store, not an issue.
+export const SUBMIT_URL =
+  "https://github.com/companion-inc/bettercodex-store/blob/main/CONTRIBUTING.md";
