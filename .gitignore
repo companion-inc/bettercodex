@@ -2,5 +2,9 @@ node_modules/
 .wrangler/
 dist/
 coverage/
+apps/web/.next/
+apps/web/out/
+output/
+*.tsbuildinfo
 *.log
 .DS_Store

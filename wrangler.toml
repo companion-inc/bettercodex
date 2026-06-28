@@ -4,7 +4,7 @@ compatibility_date = "2026-06-28"
 
 [assets]
 binding = "ASSETS"
-directory = "./apps/web"
+directory = "./apps/web/out"
 
 [vars]
 GITHUB_REPO = "companion-inc/bettercodex"

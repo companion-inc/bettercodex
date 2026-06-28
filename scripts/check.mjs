@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const ignored = new Set([".git", "node_modules", ".wrangler", "dist", "coverage"]);
+const ignored = new Set([".git", "node_modules", ".wrangler", ".next", "out", "dist", "coverage"]);
 const files = [];
 
 walk(root);

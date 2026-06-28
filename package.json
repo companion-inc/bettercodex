@@ -9,14 +9,21 @@
     "packages/*"
   ],
   "scripts": {
-    "check": "node scripts/check.mjs",
+    "check": "node scripts/check.mjs && npm --workspace @bettercodex/web run typecheck",
     "test": "node --test",
     "desktop": "node apps/desktop/bin/bettercodex.js",
     "desktop:status": "node apps/desktop/bin/bettercodex.js status",
-    "web:dev": "npm exec --yes --package=wrangler -- wrangler dev",
-    "web:dry-run": "npm exec --yes --package=wrangler -- wrangler deploy --dry-run --outdir /tmp/bettercodex-web-dry-run"
+    "web:build": "npm --workspace @bettercodex/web run build",
+    "web:dev": "npm --workspace @bettercodex/web run dev",
+    "web:dry-run": "npm run web:build && npm exec --yes --package=wrangler -- wrangler deploy --dry-run --outdir /tmp/bettercodex-web-dry-run",
+    "web:deploy": "npm run web:build && npm exec --yes --package=wrangler -- wrangler deploy"
   },
   "engines": {
     "node": ">=18"
+  },
+  "overrides": {
+    "next@16.2.9": {
+      "postcss": "8.5.15"
+    }
   }
 }

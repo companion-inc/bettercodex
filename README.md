@@ -6,7 +6,7 @@ This repo is a monorepo with separate runtimes:
 
 ```text
 apps/desktop        Codex patcher, runtime injection, local plugin/theme loader, in-Codex Store
-apps/web            Hosted public website
+apps/web            Hosted public website, built with Next.js and shadcn/ui
 apps/api            Hosted Store API for catalog, submissions, and downloads
 packages/catalog    Shared catalog schema and validation
 packages/addons     Example addons and author fixtures
@@ -40,10 +40,12 @@ Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Store panel fetc
 
 ```bash
 npm run web:dev
+npm run web:build
 npm run web:dry-run
+npm run web:deploy
 ```
 
-`apps/web` is the public website. `apps/api` is the Cloudflare Worker that serves `/api/addons`, `/api/addons/:id`, and `/api/submit`.
+`apps/web` is a Next.js App Router site using shadcn/ui components. It exports static assets to `apps/web/out`. `apps/api` is the Cloudflare Worker that serves those static assets plus `/api/addons`, `/api/addons/:id`, and `/api/submit`.
 
 The desktop Store panel uses the hosted API by default:
 
@@ -65,5 +67,6 @@ codex plugin add bettercodex-community@bettercodex
 ```bash
 npm run check
 npm test
+npm audit
 npm run web:dry-run
 ```

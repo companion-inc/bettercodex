@@ -1,0 +1,68 @@
+export const ADDON_TYPES = ["plugin", "theme", "skill"] as const;
+
+export type AddonType = (typeof ADDON_TYPES)[number];
+
+export type Addon = {
+  id: string;
+  type: AddonType;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  tags: string[];
+  downloads: number;
+  likes: number;
+  fileName: string;
+  downloadUrl: string;
+  sourceUrl: string | null;
+  homepageUrl: string | null;
+  thumbnailUrl: string | null;
+  updatedAt: string;
+};
+
+export type CatalogResponse = {
+  generatedAt: string;
+  schemaVersion: number;
+  addons: Addon[];
+};
+
+export const fallbackCatalog: Addon[] = [
+  {
+    id: "hello-codex",
+    type: "plugin",
+    name: "Hello Codex",
+    description: "Adds a small Store-installed greeting action.",
+    author: "Companion",
+    version: "0.1.0",
+    tags: ["utility", "developer"],
+    downloads: 0,
+    likes: 0,
+    fileName: "hello-codex.plugin.js",
+    downloadUrl:
+      "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/plugins/hello-codex.plugin.js",
+    sourceUrl:
+      "https://github.com/companion-inc/bettercodex/tree/main/packages/addons/examples/plugins/hello-codex.plugin.js",
+    homepageUrl: "https://github.com/companion-inc/bettercodex",
+    thumbnailUrl: "/assets/bettercodex-mark.svg",
+    updatedAt: "2026-06-28T00:00:00.000Z",
+  },
+  {
+    id: "focus-contrast",
+    type: "theme",
+    name: "Focus Contrast",
+    description: "Improves focus rings and active control contrast.",
+    author: "Companion",
+    version: "0.1.0",
+    tags: ["contrast", "editor"],
+    downloads: 0,
+    likes: 0,
+    fileName: "focus-contrast.theme.css",
+    downloadUrl:
+      "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/themes/focus-contrast.theme.css",
+    sourceUrl:
+      "https://github.com/companion-inc/bettercodex/tree/main/packages/addons/examples/themes/focus-contrast.theme.css",
+    homepageUrl: "https://github.com/companion-inc/bettercodex",
+    thumbnailUrl: "/assets/bettercodex-mark.svg",
+    updatedAt: "2026-06-28T00:00:00.000Z",
+  },
+];
