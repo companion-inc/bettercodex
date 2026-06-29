@@ -30,6 +30,14 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("bettercodex-switch"), true);
   assert.equal(renderer.includes("suppressOtherNavActive"), true);
   assert.equal(renderer.includes("bettercodex-native-active-muted"), true);
+  assert.equal(renderer.includes("syncHostContent"), true);
+  assert.equal(renderer.includes("restoreHostContent"), true);
+  assert.equal(renderer.includes("bettercodex-host-hidden"), true);
+  assert.equal(renderer.includes('document.querySelector("main")'), true);
+  assert.equal(renderer.includes("s.position = \"absolute\""), false);
+  assert.equal(renderer.includes("shouldRestoreNativeNav"), true);
+  assert.equal(renderer.includes("navItemText"), true);
+  assert.equal(renderer.includes("restoreNative: shouldRestoreNativeNav(routeTarget)"), true);
   assert.equal(renderer.includes("No plugins installed yet. Add"), false);
   assert.equal(renderer.includes("pushState"), false);
   assert.equal(renderer.includes("replaceState"), false);

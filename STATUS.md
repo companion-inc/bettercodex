@@ -49,6 +49,8 @@ node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Nav Close 2" --d
 agent-browser CDP right-sidebar/chat-navigation smoke against /tmp/Codex-BetterCodex-NavClose2.app on port 9254
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex UI Native" --destination /tmp/Codex-BetterCodex-UINative.app --home /tmp/bettercodex-ui-native-home --replace
 agent-browser CDP native-plugin-page and BetterCodex UI comparison against /tmp/Codex-BetterCodex-UINative.app on ports 9255/9256
+node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Surface" --destination /tmp/Codex-BetterCodex-Surface.app --home /tmp/bettercodex-surface-home --replace
+agent-browser CDP page-surface open/close/right-sidebar smoke against /tmp/Codex-BetterCodex-Surface.app on port 9262
 ```
 
 Results:
@@ -77,6 +79,7 @@ Results:
 - Native Codex Plugins page was measured through the running renderer: content column `728px` inside `768px` shell, header type `28px/33.6px`, search `728x32`, tabs/buttons `28px` high, installed icons `44x44`, and marketplace grid columns `350px 350px`. Source screenshot: `output/codex-ui-research/native-codex-plugins.png`.
 - BetterCodex UI-native CDP smoke passed in `/tmp/Codex-BetterCodex-UINative.app`: the toolbar paints over the underlying Codex route, only `Plugins` and `Themes` are visible, only the BetterCodex sidebar row is active while open, zero-plugin empty state is a compact `44px` row, installed plugin cards render as `350x64` native-density rows, visible filenames are removed, right-side panel toggles keep BetterCodex open, and clicking native `Plugins` closes BetterCodex and restores native route state.
 - BetterCodex UI-native evidence: `output/codex-ui-research/bettercodex-native-zero-after.png` and `output/codex-ui-research/bettercodex-native-installed-after2.png`.
+- BetterCodex page-surface CDP smoke passed in `/tmp/Codex-BetterCodex-Surface.app`: BetterCodex mounts as a flex child of the live `MAIN` page surface, hides all native host-route children while open, restores those host children on close, keeps the native right-side panel toggle from closing or redirecting BetterCodex, and repeated BetterCodex -> native Plugins navigation restored the native Plugins active state three times with no `Plugins Skills` toolbar bleed-through. Evidence screenshot: `output/codex-ui-research/bettercodex-page-surface-open.png`.
 - Hosted API responded with schema version `1` and addons from the `companion-inc/bettercodex-plugins` registry.
 - Community registry `companion-inc/bettercodex-plugins` includes starter Codex workflow skills and the `Focus Contrast` theme; it has zero desktop plugin packages.
 - Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded local add-ons from the installed folders, applied theme CSS through `BdApi.DOM`, and refreshed installed sections immediately.

@@ -600,7 +600,8 @@ function betterCodexFrameCSS() {
     ".bettercodex-panel{display:none;overflow:hidden;background:var(--color-token-main-surface-primary,#181818);color:var(--color-token-foreground,inherit);font-size:14px;line-height:21px;isolation:isolate}",
     "#bettercodex-nav-item.bettercodex-active{background:var(--color-token-list-hover-background,#ffffff14)}",
     ".bettercodex-native-active-muted{background:transparent!important}",
-    ".bettercodex-panel.bettercodex-open{display:flex;flex-direction:column;min-height:0}",
+    ".bettercodex-host-hidden{display:none!important}",
+    ".bettercodex-panel.bettercodex-open{display:flex;flex:1;flex-direction:column;width:100%;height:100%;min-height:0}",
     ".bettercodex-toolbar{position:relative;z-index:2;height:46px;margin-left:16px;padding-right:8px;display:flex;align-items:center;gap:8px;background:var(--color-token-main-surface-primary,#181818);user-select:none;contain:layout paint}",
     ".bettercodex-toolbar-tabs{display:inline-flex;align-items:center;gap:2px}",
     ".bettercodex-tab{border:1px solid transparent;border-radius:12.5px;height:28px;padding:0 8px;background:transparent;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#8f8f8f));font:inherit;font-size:14px;line-height:18px;cursor:pointer;white-space:nowrap}",
@@ -698,9 +699,14 @@ function rendererRuntimeSource() {
     try { await renderCurrent(); } catch (error) { /* pre-render community content so the page opens instantly */ }
   }
 
-  // The element Codex renders its pages into — the BetterCodex page mounts inside this so it
-  // sits exactly where every other Codex page sits (same flow, bounds, scroll, surface).
+  // The main Codex page surface. BetterCodex claims the whole surface while open so native
+  // route chrome such as the Plugins/Skills toolbar cannot remain visible underneath it.
   function findContentEl() {
+    const main = document.querySelector("main");
+    if (main) {
+      const r = main.getBoundingClientRect();
+      if (r.width > window.innerWidth * 0.4 && r.height > window.innerHeight * 0.4) return main;
+    }
     let best = null;
     let bestArea = 0;
     for (const el of document.querySelectorAll('[class*="overflow-hidden"]')) {
@@ -730,14 +736,49 @@ function rendererRuntimeSource() {
     const container = findContentEl();
     if (!container || !runtime.panel) return false;
     if (runtime.panel.parentElement !== container) container.appendChild(runtime.panel);
+    syncHostContent(container);
     const s = runtime.panel.style;
-    s.position = "absolute";
-    s.left = "0"; s.top = "0"; s.right = "0"; s.bottom = "0"; s.width = ""; s.height = "";
-    s.zIndex = "20";
+    s.position = "relative";
+    s.left = ""; s.top = ""; s.right = ""; s.bottom = ""; s.width = ""; s.height = "";
+    s.flex = "1 1 auto";
+    s.zIndex = "";
     s.background = effectiveBg(container);
     runtime.container = container;
     runtime.openLocation = location.href;
     return true;
+  }
+
+  function syncHostContent(container) {
+    if (!container || !runtime.panel) return;
+    if (runtime.hostContainer && runtime.hostContainer !== container) restoreHostContent();
+    runtime.hostContainer = container;
+    runtime.hostHidden = runtime.hostHidden || [];
+    const known = new Set(runtime.hostHidden.map((entry) => entry.node));
+    for (const child of Array.from(container.children)) {
+      if (child === runtime.panel || child.id === "bettercodex-root") continue;
+      if (!known.has(child)) {
+        runtime.hostHidden.push({
+          node: child,
+          ariaHidden: child.getAttribute("aria-hidden"),
+          hadAriaHidden: child.hasAttribute("aria-hidden"),
+        });
+        known.add(child);
+      }
+      child.classList.add("bettercodex-host-hidden");
+      child.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function restoreHostContent() {
+    for (const entry of runtime.hostHidden || []) {
+      const node = entry.node;
+      if (!node || !node.classList) continue;
+      node.classList.remove("bettercodex-host-hidden");
+      if (entry.hadAriaHidden) node.setAttribute("aria-hidden", entry.ariaHidden || "");
+      else node.removeAttribute("aria-hidden");
+    }
+    runtime.hostHidden = [];
+    runtime.hostContainer = null;
   }
 
   // Codex re-renders its content area on navigation; keep our page in the live container while open.
@@ -750,6 +791,7 @@ function rendererRuntimeSource() {
         runtime.panel.style.background = effectiveBg(runtime.container);
         runtime.container.appendChild(runtime.panel);
       }
+      if (runtime.container) syncHostContent(runtime.container);
     });
     runtime.containerObserver.observe(runtime.container.parentElement, {childList: true, subtree: true});
   }
@@ -793,6 +835,20 @@ function rendererRuntimeSource() {
       else entry.item.removeAttribute("aria-current");
     }
     runtime.suppressedNav = [];
+  }
+
+  function navItemText(item) {
+    return String((item && (item.innerText || item.textContent)) || "").replace(/\s+/g, " ").trim();
+  }
+
+  function shouldRestoreNativeNav(routeTarget) {
+    if (!routeTarget || !runtime.suppressedNav) return false;
+    const label = navItemText(routeTarget);
+    return runtime.suppressedNav.some((entry) => {
+      const item = entry.item;
+      if (!item || !document.contains(item)) return false;
+      return item === routeTarget || item.contains(routeTarget) || (label && navItemText(item) === label);
+    });
   }
 
   // Codex's CSP silently drops webContents.insertCSS and <style> tags. A constructable
@@ -957,7 +1013,7 @@ function rendererRuntimeSource() {
       if (!routeTarget) return;
       const navigation = target.closest("nav, [role='navigation']");
       if (!navigation) return;
-      closePanel({restoreNative: false});
+      closePanel({restoreNative: shouldRestoreNativeNav(routeTarget)});
     }, true);
   }
 
@@ -1117,6 +1173,7 @@ function rendererRuntimeSource() {
     setNavActive(false);
     if (options.restoreNative !== false) restoreOtherNavActive();
     else runtime.suppressedNav = [];
+    restoreHostContent();
     if (runtime.containerObserver) { runtime.containerObserver.disconnect(); runtime.containerObserver = null; }
     runtime.openLocation = null;
     parkPanel();
@@ -1129,6 +1186,7 @@ function rendererRuntimeSource() {
     const s = runtime.panel.style;
     s.position = "";
     s.left = ""; s.top = ""; s.right = ""; s.bottom = ""; s.width = ""; s.height = "";
+    s.flex = "";
     s.zIndex = "";
     s.background = "";
   }
