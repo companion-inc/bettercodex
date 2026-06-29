@@ -59,7 +59,8 @@ function install(options = {}) {
   const paths = resolveAppPaths(appRoot);
   assertCodexApp(paths);
 
-  const runtime = writeRuntimeFiles(installRoot, {storeEndpoint: options.storeEndpoint});
+  const catalogEndpoint = options.catalogEndpoint || options.storeEndpoint;
+  const runtime = writeRuntimeFiles(installRoot, {catalogEndpoint});
   const archive = readArchive(paths.asarPath);
   const pkg = JSON.parse(readText(archive, "/package.json"));
   const bootstrapPath = `/${pkg.main}`;
@@ -80,7 +81,7 @@ function install(options = {}) {
       originalAsarHeaderHash: originalHeaderHash,
       patchedAsarHash: originalHash,
       patchedAsarHeaderHash: originalHeaderHash,
-      storeEndpoint: options.storeEndpoint || null,
+      catalogEndpoint: catalogEndpoint || null,
       version: pkg.version || null,
     });
     if (options.restart) {
@@ -117,7 +118,7 @@ function install(options = {}) {
     originalAsarHeaderHash: originalHeaderHash,
     patchedAsarHash: patchedHash,
     patchedAsarHeaderHash: patchedHeaderHash,
-    storeEndpoint: options.storeEndpoint || null,
+    catalogEndpoint: catalogEndpoint || null,
     version: pkg.version || null,
   });
 

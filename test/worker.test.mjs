@@ -8,7 +8,7 @@ test("Worker serves catalog response", async () => {
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.schemaVersion, 1);
-  // Catalog contents come from the bettercodex-store repo at runtime; assert the shape.
+  // Catalog contents come from the bettercodex-plugins repo at runtime; assert the shape.
   assert.ok(Array.isArray(payload.addons));
 });
 

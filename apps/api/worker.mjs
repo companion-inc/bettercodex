@@ -2,12 +2,12 @@ import {validateSubmission} from "../../packages/catalog/src/index.mjs";
 
 // The marketplace is community-owned: its contents come from the bettercodex-plugins
 // repo, where authors add plugins via pull request. We read its generated catalog.json.
-const STORE_CATALOG_URL =
+const COMMUNITY_CATALOG_URL =
   "https://raw.githubusercontent.com/companion-inc/bettercodex-plugins/main/catalog.json";
 
-async function fetchStoreCatalog() {
+async function fetchCommunityCatalog() {
   try {
-    const response = await fetch(STORE_CATALOG_URL, {cf: {cacheTtl: 300, cacheEverything: true}});
+    const response = await fetch(COMMUNITY_CATALOG_URL, {cf: {cacheTtl: 300, cacheEverything: true}});
     if (!response.ok) return [];
     const data = await response.json();
     const addons = Array.isArray(data) ? data : data.addons;
@@ -37,13 +37,13 @@ export default {
     }
 
     if (url.pathname === "/api/addons" && request.method === "GET") {
-      const addons = await fetchStoreCatalog();
+      const addons = await fetchCommunityCatalog();
       return json({schemaVersion: 1, generatedAt: new Date().toISOString(), addons});
     }
 
     if (url.pathname.startsWith("/api/addons/") && request.method === "GET") {
       const id = decodeURIComponent(url.pathname.slice("/api/addons/".length));
-      const addons = await fetchStoreCatalog();
+      const addons = await fetchCommunityCatalog();
       const addon = addons.find((item) => item.id === id || (item.name || "").toLowerCase() === id.toLowerCase());
       return addon ? json(addon) : json({error: "not_found"}, 404);
     }
@@ -113,8 +113,8 @@ async function createSubmissionIssue(env, submission) {
       "x-github-api-version": "2022-11-28",
     },
     body: JSON.stringify({
-      title: `Store submission: ${submission.name}`,
-      labels: ["store-submission", submission.type],
+      title: `Marketplace submission: ${submission.name}`,
+      labels: ["marketplace-submission", submission.type],
       body: [
         `Name: ${submission.name}`,
         `Type: ${submission.type}`,

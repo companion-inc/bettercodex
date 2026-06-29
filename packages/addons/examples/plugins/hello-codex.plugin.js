@@ -1,7 +1,7 @@
 /**
  * @name Hello Codex
  * @version 0.1.0
- * @description Adds a small Store-installed greeting action.
+ * @description Adds a small BetterCodex greeting action.
  * @author Companion
  */
 module.exports = class HelloCodex {

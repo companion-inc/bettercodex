@@ -34,7 +34,7 @@ function createBundle(options = {}) {
     appRoot: destination,
     installRoot,
     restart: false,
-    storeEndpoint: options.storeEndpoint,
+    catalogEndpoint: options.catalogEndpoint || options.storeEndpoint,
   });
 
   const infoPlist = path.join(destination, "Contents", "Info.plist");

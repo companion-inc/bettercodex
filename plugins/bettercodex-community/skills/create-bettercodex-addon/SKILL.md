@@ -1,6 +1,6 @@
 ---
 name: create-bettercodex-addon
-description: Create BetterCodex plugins, themes, or Codex skills for submission to the Store.
+description: Create BetterCodex plugins, themes, or Codex skills for marketplace submission.
 ---
 
 # Create BetterCodex Addon

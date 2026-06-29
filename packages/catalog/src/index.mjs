@@ -1,6 +1,6 @@
 export const ADDON_TYPES = Object.freeze(["plugin", "theme", "skill"]);
 
-export const DEFAULT_STORE_ENDPOINT = "https://bettercodex.companion.ai/api/addons";
+export const DEFAULT_CATALOG_ENDPOINT = "https://bettercodex.companion.ai/api/addons";
 
 export const TAGS = Object.freeze({
   plugin: ["workflow", "chat", "ui", "developer", "automation", "utility"],

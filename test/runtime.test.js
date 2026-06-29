@@ -12,7 +12,7 @@ const {writeRuntimeFiles} = require("../apps/desktop/src/runtimeFiles");
 test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bettercodex-runtime-"));
   const runtime = writeRuntimeFiles(installRoot, {
-    storeEndpoint: "https://store.example.test/api/addons",
+    catalogEndpoint: "https://catalog.example.test/api/addons",
   });
 
   for (const filePath of [runtime.loaderPath, runtime.preloadPath, runtime.rendererPath]) {
@@ -20,7 +20,7 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   }
 
   const config = JSON.parse(fs.readFileSync(runtime.configPath, "utf8"));
-  assert.equal(config.storeEndpoint, "https://store.example.test/api/addons");
+  assert.equal(config.catalogEndpoint, "https://catalog.example.test/api/addons");
   assert.equal(fs.existsSync(path.join(installRoot, "plugins")), true);
   assert.equal(fs.existsSync(path.join(installRoot, "themes")), true);
 });

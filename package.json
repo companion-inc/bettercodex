@@ -2,7 +2,7 @@
   "name": "bettercodex",
   "version": "0.1.0",
   "private": true,
-  "description": "BetterCodex client, in-app Store, hosted web, and hosted API.",
+  "description": "BetterCodex client, in-app plugins/themes UI, hosted web, and hosted API.",
   "license": "MIT",
   "workspaces": [
     "apps/*",

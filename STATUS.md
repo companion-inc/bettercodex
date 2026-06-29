@@ -4,19 +4,19 @@
 
 BetterCodex is organized as a single repo with separate runtimes.
 
-- `apps/desktop`: user-installed Codex patcher and in-Codex Store panel using Codex token styling.
-- `apps/web`: hosted public site built with Next.js App Router and shadcn/ui, exported as Worker static assets.
-- `apps/api`: hosted Store API.
+- `apps/desktop`: user-installed Codex patcher and in-Codex Plugins/Themes UI using Codex token styling.
+- `apps/web`: hosted public marketplace site built with Vite, React, and shadcn/ui.
+- `apps/api`: hosted marketplace API.
 - `packages/catalog`: shared schema and sample catalog.
 - `packages/addons`: example addons and author fixtures.
 - `plugins/bettercodex-community`: Codex-native skills for addon authors.
-- Hosted Store: `https://bettercodex-web.companion-inc.workers.dev`.
+- Hosted marketplace: `https://bettercodex-web.companion-inc.workers.dev`.
 
 The product vocabulary is:
 
-- In-app surface: Store.
+- In-app surfaces: Plugins and Themes.
 - Hosted surface: web/API.
-- Generic description: community catalog.
+- Generic description: community marketplace/catalog.
 
 ## Verification
 
@@ -27,12 +27,14 @@ npm run check
 npm test
 npm audit
 python3 /Users/advaitpaliwal/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/bettercodex-community
-npm run web:dry-run
 npm run web:build
-npm run desktop:status
-npm run desktop -- bundle --name Smoke --destination /tmp/Codex-BetterCodex-Monorepo-Smoke.app --replace
-npm run desktop -- status --app /tmp/Codex-BetterCodex-Monorepo-Smoke.app
-Playwright screenshot/browser assertions against http://localhost:8787
+npm run web:dry-run
+npm run web:deploy
+node apps/desktop/bin/bettercodex.js bundle --name "Runtime Smoke" --destination /tmp/Codex-BetterCodex-RuntimeSmoke.app --replace
+codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-RuntimeSmoke.app
+CDP screenshot/browser assertions against /tmp/Codex-BetterCodex-RuntimeSmoke.app
+node apps/desktop/bin/bettercodex.js install --no-restart
+node apps/desktop/bin/bettercodex.js status
 curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
 ```
 
@@ -42,11 +44,13 @@ Results:
 - Test suite passed: 17 tests.
 - npm audit passed: 0 vulnerabilities.
 - Codex-native skill pack validation passed.
-- Next.js/shadcn web build passed and exported static assets to `apps/web/out`.
-- Cloudflare Worker/static-assets dry-run passed.
-- Playwright captured desktop/mobile renders and browser assertions passed: hosted API schema `1`, seed cards rendered, tabs/search worked, no console errors, no horizontal overflow.
-- Cloudflare Worker deployed: `https://bettercodex-web.companion-inc.workers.dev`.
-- Hosted API responded with schema version `1` and seed addons `hello-codex,focus-contrast`.
-- Official `/Applications/Codex.app` stayed unmodified: loader `no`, ASAR integrity `yes`, codesign `yes`.
-- Disposable `/tmp/Codex-BetterCodex-Monorepo-Smoke.app` patched successfully: loader `yes`, ASAR integrity `yes`, codesign `yes`.
-- Smoke runtime config points at `https://bettercodex-web.companion-inc.workers.dev/api/addons`.
+- Vite/React/shadcn web build passed and exported static assets to ignored `apps/web/out`.
+- Cloudflare Worker/static-assets dry-run passed with Wrangler 4.105.0.
+- Cloudflare Worker deployed: `https://bettercodex-web.companion-inc.workers.dev`, version `828b0178-d248-4471-8b70-ac5edba01028`.
+- Disposable `/tmp/Codex-BetterCodex-RuntimeSmoke.app` patched successfully and passed codesign verification.
+- CDP rendered BetterCodex inside the disposable Codex app: top tabs are only `Plugins` and `Themes`; Plugins shows `Community plugins` and `Installed plugins`; Themes shows `Community themes` and `Installed themes`; the old extra catalog tab and command-copy action are absent.
+- Starter skill cards render as disabled `Installed` status buttons; search filters to `Repo Warmup`; native Codex `Plugins` navigation closes the BetterCodex panel and clears the BetterCodex active state.
+- Hosted API responded with schema version `1` and skill addons `failing-test-first, pr-ready, repo-warmup, thread-checkpoint`.
+- Official `/Applications/Codex.app` on disk is patched: loader `yes`, ASAR integrity `yes`, codesign `yes`.
+- Official runtime config uses `catalogEndpoint: https://bettercodex-web.companion-inc.workers.dev/api/addons`.
+- Current running Codex instances need a restart to load the refreshed runtime.

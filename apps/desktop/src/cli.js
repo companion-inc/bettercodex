@@ -3,7 +3,7 @@
 const path = require("node:path");
 
 const {createBundle} = require("./bundler");
-const {defaultAppRoot, defaultInstallRoot, defaultStoreEndpoint} = require("./constants");
+const {defaultAppRoot, defaultCatalogEndpoint, defaultInstallRoot} = require("./constants");
 const {inspect, install, uninstall} = require("./installer");
 
 async function main(argv) {
@@ -18,11 +18,11 @@ async function main(argv) {
         appRoot: options.app,
         installRoot: options.home,
         restart: options.restart,
-        storeEndpoint: options.store,
+        catalogEndpoint: options.catalog,
       });
       console.log(result.changed ? "BetterCodex installed." : result.message);
       console.log(`Install root: ${result.installRoot || options.home}`);
-      console.log(`Store API: ${options.store}`);
+      console.log(`Catalog API: ${options.catalog}`);
       if (result.backupDir) {
         console.log(`Backup: ${result.backupDir}`);
       }
@@ -36,7 +36,7 @@ async function main(argv) {
         launch: options.launch,
         name: options.bundleName,
         replace: options.replace,
-        storeEndpoint: options.store,
+        catalogEndpoint: options.catalog,
       });
       console.log(`BetterCodex bundle: ${result.destination}`);
       console.log(`Bundle id: ${result.bundleId}`);
@@ -55,7 +55,7 @@ async function main(argv) {
     case "paths":
       console.log(`App: ${options.app}`);
       console.log(`Home: ${options.home}`);
-      console.log(`Store API: ${options.store}`);
+      console.log(`Catalog API: ${options.catalog}`);
       console.log(`Plugins: ${path.join(options.home, "plugins")}`);
       console.log(`Themes: ${path.join(options.home, "themes")}`);
       return;
@@ -76,7 +76,7 @@ function parseArgs(argv) {
     launch: false,
     replace: false,
     restart: true,
-    store: defaultStoreEndpoint,
+    catalog: defaultCatalogEndpoint,
   };
   let command = "help";
 
@@ -96,8 +96,8 @@ function parseArgs(argv) {
       i += 1;
       continue;
     }
-    if (arg === "--store") {
-      options.store = requireValue(argv, i, arg);
+    if (arg === "--catalog" || arg === "--store") {
+      options.catalog = requireValue(argv, i, arg);
       i += 1;
       continue;
     }
@@ -167,12 +167,12 @@ Commands:
   install             Patch Codex Desktop and install the BetterCodex runtime.
   bundle              Create a sibling Codex-BetterCodex.app bundle for dev/safety.
   uninstall           Remove the BetterCodex loader from Codex Desktop.
-  paths               Print app, data, plugin, theme, and Store paths.
+  paths               Print app, data, plugin, theme, and marketplace paths.
 
 Options:
   --app <path>        Codex.app path. Default: ${defaultAppRoot}
   --home <path>       BetterCodex data path. Default: ${defaultInstallRoot}
-  --store <url>       Store API endpoint. Default: ${defaultStoreEndpoint}
+  --catalog <url>     Catalog API endpoint. Default: ${defaultCatalogEndpoint}
   --name <name>       Sibling app name suffix for bundle. Default: BetterCodex
   --destination <app> Sibling app destination for bundle.
   --replace           Replace an existing destination bundle.

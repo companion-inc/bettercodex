@@ -12,18 +12,18 @@ test("parseArgs keeps install restart-on by default", () => {
   assert.equal(parsed.options.restart, true);
 });
 
-test("parseArgs supports no-restart and custom Store API", () => {
+test("parseArgs supports no-restart and custom marketplace API", () => {
   const parsed = parseArgs([
     "install",
     "--no-restart",
     "--home",
     "/tmp/bettercodex",
-    "--store",
-    "https://store.example.test/api/addons",
+    "--catalog",
+    "https://marketplace.example.test/api/addons",
   ]);
   assert.equal(parsed.options.home, "/tmp/bettercodex");
   assert.equal(parsed.options.restart, false);
-  assert.equal(parsed.options.store, "https://store.example.test/api/addons");
+  assert.equal(parsed.options.catalog, "https://marketplace.example.test/api/addons");
 });
 
 test("parseArgs supports sibling bundle options", () => {

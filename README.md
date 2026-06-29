@@ -1,13 +1,13 @@
 # BetterCodex
 
-BetterCodex adds a community Store to Codex Desktop.
+BetterCodex adds community plugins and themes to Codex Desktop.
 
 This repo is a monorepo with separate runtimes:
 
 ```text
-apps/desktop        Codex patcher, runtime injection, local plugin/theme loader, in-Codex Store
-apps/web            Hosted public website, built with Next.js and shadcn/ui
-apps/api            Hosted Store API for catalog, submissions, and downloads
+apps/desktop        Codex patcher, runtime injection, local plugin/theme loader, in-Codex Plugins/Themes UI
+apps/web            Hosted public marketplace website, built with Vite, React, and shadcn/ui
+apps/api            Hosted marketplace API for catalog, submissions, and downloads
 packages/catalog    Shared catalog schema and validation
 packages/addons     Example addons and author fixtures
 plugins/            Codex-native BetterCodex skill pack
@@ -15,7 +15,7 @@ plugins/            Codex-native BetterCodex skill pack
 
 Users install the desktop client. Companion hosts the web and API.
 
-Live hosted Store:
+Live hosted marketplace:
 
 - Web: https://bettercodex-web.companion-inc.workers.dev
 - API: https://bettercodex-web.companion-inc.workers.dev/api/addons
@@ -34,7 +34,7 @@ Desktop addons live in:
 ~/.codex/bettercodex/themes
 ```
 
-Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Store panel fetches the hosted Store API and installs selected files into those folders. The panel inherits Codex token colors, borders, typography, and surfaces so it reads as part of Codex rather than as a separate website frame.
+Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Plugins and Themes pages fetch the hosted marketplace API and install selected files into those folders. The pages inherit Codex token colors, borders, typography, and surfaces so they read as part of Codex rather than as a separate website frame.
 
 ## Hosted Web/API
 
@@ -45,9 +45,9 @@ npm run web:dry-run
 npm run web:deploy
 ```
 
-`apps/web` is a Next.js App Router site using shadcn/ui components. It exports static assets to `apps/web/out`. `apps/api` is the Cloudflare Worker that serves those static assets plus `/api/addons`, `/api/addons/:id`, and `/api/submit`.
+`apps/web` is a Vite/React site using shadcn/ui components. It exports static assets to `apps/web/dist`. `apps/api` is the Cloudflare Worker that serves the hosted marketplace API for `/api/addons`, `/api/addons/:id`, and `/api/submit`.
 
-The desktop Store panel uses the hosted API by default:
+The desktop Plugins and Themes pages use the hosted API by default:
 
 ```text
 https://bettercodex-web.companion-inc.workers.dev/api/addons

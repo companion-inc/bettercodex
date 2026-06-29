@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const {defaultStoreEndpoint} = require("./constants");
+const {defaultCatalogEndpoint} = require("./constants");
 
 function writeRuntimeFiles(installRoot, options = {}) {
   const runtimeDir = path.join(installRoot, "runtime");
@@ -18,7 +18,7 @@ function writeRuntimeFiles(installRoot, options = {}) {
   const config = {
     dataDir,
     pluginDir,
-    storeEndpoint: options.storeEndpoint || defaultStoreEndpoint,
+    catalogEndpoint: options.catalogEndpoint || options.storeEndpoint || defaultCatalogEndpoint,
     themeDir,
   };
 
@@ -44,6 +44,7 @@ const Module = require("node:module");
 
 const runtimeDir = __dirname;
 const config = JSON.parse(fs.readFileSync(path.join(runtimeDir, "config.json"), "utf8"));
+config.catalogEndpoint = config.catalogEndpoint || config.storeEndpoint;
 const rendererPath = path.join(runtimeDir, "renderer.cjs");
 const preloadPath = path.join(runtimeDir, "preload.cjs");
 const statePath = path.join(config.dataDir, "addons.json");
@@ -116,9 +117,9 @@ try {
 function registerIpc(ipcMain, shell) {
   if (!ipcMain || ipcMain.__bettercodexReady) return;
   ipcMain.__bettercodexReady = true;
-  ipcMain.handle("bettercodex:getConfig", () => ({storeEndpoint: config.storeEndpoint}));
+  ipcMain.handle("bettercodex:getConfig", () => ({catalogEndpoint: config.catalogEndpoint}));
   ipcMain.handle("bettercodex:getStyles", () => betterCodexFrameCSS());
-  ipcMain.handle("bettercodex:fetchStore", () => fetchStore());
+  ipcMain.handle("bettercodex:fetchCatalog", () => fetchCatalog());
   ipcMain.handle("bettercodex:listAddons", () => listAddons());
   ipcMain.handle("bettercodex:readAddon", (event, kind, fileName) => readAddon(kind, fileName));
   ipcMain.handle("bettercodex:installAddon", (event, addon) => installAddon(addon));
@@ -126,9 +127,9 @@ function registerIpc(ipcMain, shell) {
   ipcMain.handle("bettercodex:openFolder", (event, kind) => shell.openPath(kind === "theme" ? config.themeDir : config.pluginDir));
 }
 
-async function fetchStore() {
-  const response = await fetch(config.storeEndpoint, {headers: {"cache-control": "no-cache"}});
-  if (!response.ok) throw new Error("Store API returned " + response.status);
+async function fetchCatalog() {
+  const response = await fetch(config.catalogEndpoint, {headers: {"cache-control": "no-cache"}});
+  if (!response.ok) throw new Error("Community catalog returned " + response.status);
   return response.json();
 }
 
@@ -140,7 +141,7 @@ async function installAddon(addon) {
   if (type === "plugin" && !fileName.endsWith(".plugin.js")) throw new Error("Plugin files must end with .plugin.js");
   if (type === "theme" && !fileName.endsWith(".theme.css")) throw new Error("Theme files must end with .theme.css");
   const downloadUrl = String(addon.downloadUrl || "");
-  if (!/^https:\/\/raw\.githubusercontent\.com\//.test(downloadUrl)) throw new Error("Store downloads must use raw GitHub HTTPS URLs");
+  if (!/^https:\/\/raw\.githubusercontent\.com\//.test(downloadUrl)) throw new Error("Community downloads must use raw GitHub HTTPS URLs");
   const response = await fetch(downloadUrl, {headers: {"cache-control": "no-cache"}});
   if (!response.ok) throw new Error("Download returned " + response.status);
   const text = await response.text();
@@ -215,31 +216,44 @@ function assertSafeFileName(fileName) {
 function betterCodexFrameCSS() {
   return [
     "#bettercodex-root{font:inherit}",
-    ".bettercodex-panel{display:none;overflow-y:auto;color:var(--color-token-foreground,inherit)}",
+    ".bettercodex-panel{display:none;overflow:hidden;color:var(--color-token-foreground,inherit);font-size:14px;line-height:21px}",
     "#bettercodex-nav-item.bettercodex-active{background:var(--color-token-list-hover-background,#ffffff14)}",
-    ".bettercodex-panel.bettercodex-open{display:block}",
-    ".bettercodex-page{max-width:720px;margin:0 auto;padding:56px 24px 96px;display:flex;flex-direction:column;gap:20px}",
-    ".bettercodex-search{display:flex;align-items:center;height:44px;padding:0 14px;border:1px solid var(--color-token-border-default,#ffffff1a);border-radius:14px;background:var(--color-token-main-surface-secondary,transparent)}",
-    ".bettercodex-input{min-width:0;flex:1;background:transparent;border:0;outline:none;color:var(--color-token-foreground,inherit);font:inherit;font-size:15px}",
-    ".bettercodex-input::placeholder{color:var(--color-token-text-secondary,#9ca3af)}",
-    ".bettercodex-tabs{display:flex;gap:2px;border-bottom:1px solid var(--color-token-border-default,#ffffff14)}",
-    ".bettercodex-tabs button{position:relative;border:0;background:transparent;color:var(--color-token-text-secondary,#9ca3af);padding:8px 12px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}",
-    ".bettercodex-tabs button.active{color:var(--color-token-foreground,inherit)}",
-    ".bettercodex-tabs button.active::after{content:'';position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--color-token-foreground,currentColor)}",
-    ".bettercodex-list{display:flex;flex-direction:column;gap:2px}",
+    ".bettercodex-panel.bettercodex-open{display:flex;flex-direction:column;min-height:0}",
+    ".bettercodex-toolbar{height:46px;margin-left:16px;padding-right:8px;display:flex;align-items:center;gap:8px;user-select:none;contain:layout paint}",
+    ".bettercodex-toolbar-tabs{display:inline-flex;align-items:center;gap:2px}",
+    ".bettercodex-tab{border:1px solid transparent;border-radius:12.5px;height:28px;padding:0 8px;background:transparent;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#8f8f8f));font:inherit;font-size:14px;line-height:18px;cursor:pointer;white-space:nowrap}",
+    ".bettercodex-tab:hover{background:var(--color-token-list-hover-background,#ffffff12);color:var(--color-token-foreground,inherit)}",
+    ".bettercodex-tab.active{background:var(--color-token-foreground-5,rgba(255,255,255,.05));color:var(--color-token-foreground,inherit)}",
+    ".bettercodex-scroll{position:relative;min-height:0;flex:1;overflow-y:auto;scrollbar-gutter:stable}",
+    ".bettercodex-search-shell{position:sticky;top:0;z-index:30;background:var(--color-token-main-surface-primary,#141414)}",
+    ".bettercodex-search-shell::after{content:'';pointer-events:none;position:absolute;left:-12px;right:-12px;top:100%;height:8px;background:var(--color-token-main-surface-primary,#141414)}",
+    ".bettercodex-clear[hidden]{display:none!important}",
+    ".bettercodex-section-stack{display:flex;min-height:0;flex:1;flex-direction:column;gap:32px}",
+    ".bettercodex-section{display:flex;flex-direction:column;gap:16px}",
+    ".bettercodex-section.compact{gap:4px}",
+    ".bettercodex-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-token-border-light,var(--color-token-border-default,#ffffff14));padding:0 2px 8px 8px}",
+    ".bettercodex-section-title{font-size:16px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit)}",
+    ".bettercodex-count{font-size:13px;line-height:22px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#8f8f8f))}",
+    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:16px}",
+    "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
+    ".bettercodex-plugin-card{display:flex;min-height:63px;align-items:center;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:pointer}",
+    ".bettercodex-plugin-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
+    ".bettercodex-list{display:flex;flex-direction:column}",
     ".bettercodex-section-row{display:flex;align-items:center;justify-content:space-between;gap:12px}",
-    ".bettercodex-sec{font-size:18px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit);margin:6px 0 10px}",
-    ".bettercodex-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px}",
-    ".bettercodex-row:hover{background:var(--color-token-list-hover-background,#ffffff0d)}",
-    ".bettercodex-ico{font-size:16px;font-weight:600}",
+    ".bettercodex-list-item{position:relative}",
+    ".bettercodex-list-item::before{content:'';position:absolute;left:12px;right:12px;top:0;height:1px;background:var(--color-token-border-light,var(--color-token-border-default,#ffffff14))}",
+    ".bettercodex-list-item:first-child::before{display:none}",
+    ".bettercodex-row{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;width:100%;border-radius:12.5px;padding:12px;text-align:left}",
+    ".bettercodex-row:hover{background:var(--color-token-list-active-selection-background,var(--color-token-list-hover-background,#ffffff0d))}",
+    ".bettercodex-ico{font-size:16px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
     ".bettercodex-grow{min-width:0;flex:1}",
-    ".bettercodex-name{font-size:14px;font-weight:500;color:var(--color-token-foreground,inherit)}",
-    ".bettercodex-desc{font-size:13px;line-height:1.4;color:var(--color-token-text-secondary,#9ca3af);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".bettercodex-act{flex-shrink:0;height:32px;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:9px;background:transparent;color:var(--color-token-foreground,inherit);padding:0 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer}",
+    ".bettercodex-name{font-size:14px;line-height:21px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".bettercodex-desc{font-size:13px;line-height:21px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".bettercodex-act{flex-shrink:0;display:flex;align-items:center;height:28px;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:12.5px;background:transparent;color:var(--color-token-foreground,inherit);padding:0 10px;font:inherit;font-size:14px;line-height:18px;cursor:pointer}",
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
-    ".bettercodex-act.primary{background:var(--color-token-interactive-label-accent-default,#0285ff);color:#fff;border-color:transparent}",
+    ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
     ".bettercodex-act:disabled{opacity:.5;cursor:default}",
-    ".bettercodex-empty{color:var(--color-token-text-secondary,#9ca3af);padding:28px 4px;font-size:14px}",
+    ".bettercodex-empty{display:flex;min-height:160px;align-items:center;justify-content:center;text-align:center;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#9ca3af));font-size:14px}",
     ".bettercodex-toast{position:fixed;right:18px;bottom:18px;z-index:2147483647;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:10px;background:var(--color-token-main-surface-primary,#1a1a1a);color:var(--color-token-foreground,inherit);padding:10px 12px;box-shadow:0 12px 40px #00000040}"
   ].join("\n");
 }
@@ -259,7 +273,7 @@ try {
   contextBridge.exposeInMainWorld("BetterCodexNative", {
     getConfig: () => ipcRenderer.invoke("bettercodex:getConfig"),
     getStyles: () => ipcRenderer.invoke("bettercodex:getStyles"),
-    fetchStore: () => ipcRenderer.invoke("bettercodex:fetchStore"),
+    fetchCatalog: () => ipcRenderer.invoke("bettercodex:fetchCatalog"),
     listAddons: () => ipcRenderer.invoke("bettercodex:listAddons"),
     readAddon: (kind, fileName) => ipcRenderer.invoke("bettercodex:readAddon", kind, fileName),
     installAddon: (addon) => ipcRenderer.invoke("bettercodex:installAddon", addon),
@@ -296,7 +310,7 @@ function rendererRuntimeSource() {
     try { mountPanel(); } catch (error) { /* non-fatal */ }
     try { bindHostNavigationTeardown(); } catch (error) { /* non-fatal */ }
     try { ensureSidebarItem(); } catch (error) { /* non-fatal */ }
-    try { await renderCurrent(); } catch (error) { /* pre-render the store so the page opens instantly */ }
+    try { await renderCurrent(); } catch (error) { /* pre-render community content so the page opens instantly */ }
   }
 
   // The element Codex renders its pages into — the BetterCodex page mounts inside this so it
@@ -585,37 +599,99 @@ function rendererRuntimeSource() {
     if (existing) {
       runtime.panel = existing;
       runtime.content = existing.querySelector(".bettercodex-content");
+      bindPanelControls();
       return;
     }
     const root = ensureRoot();
     root.innerHTML =
       '<section class="bettercodex-panel">' +
-        '<div class="bettercodex-page">' +
-          '<div class="flex flex-col gap-2 px-2">' +
-            '<h1 class="heading-xl font-normal text-token-foreground">BetterCodex</h1>' +
-            '<p class="text-lg leading-6 text-token-text-secondary">Community plugins and themes for Codex.</p>' +
+        '<div class="bettercodex-toolbar">' +
+          '<div class="bettercodex-toolbar-tabs" role="tablist" aria-label="BetterCodex sections">' +
+            '<button type="button" data-tab="plugins" class="' + topTabClass(true) + '" role="tab" aria-selected="true">Plugins</button>' +
+            '<button type="button" data-tab="themes" class="' + topTabClass(false) + '" role="tab" aria-selected="false">Themes</button>' +
           '</div>' +
-          '<div class="bettercodex-search"><input class="bettercodex-input" type="search" placeholder="Search BetterCodex" aria-label="Search BetterCodex"></div>' +
-          '<nav class="bettercodex-tabs"><button data-tab="store" class="active">Store</button><button data-tab="plugins">Plugins</button><button data-tab="themes">Themes</button></nav>' +
-          '<div class="bettercodex-content"></div>' +
+        '</div>' +
+        '<div class="bettercodex-scroll">' +
+          '<div class="mx-auto w-full max-w-[var(--thread-content-max-width)] px-panel pt-panel pb-4">' +
+            '<div class="flex flex-col gap-2 px-2">' +
+              '<h1 class="heading-xl font-normal text-token-foreground">BetterCodex</h1>' +
+              '<p class="text-lg leading-6 text-token-text-secondary">Community plugins and themes for Codex</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bettercodex-search-shell">' +
+            '<div class="mx-auto w-full max-w-[var(--thread-content-max-width)] px-panel pb-2">' +
+              '<label class="no-drag flex items-center gap-2 border border-token-input-border px-2.5 py-0 text-base leading-[18px] backdrop-blur-sm h-8 rounded-full bg-token-input-background/90 electron:dark:bg-token-dropdown-background w-full min-w-0" for="bettercodex-page-search">' +
+                searchIcon() +
+                '<input id="bettercodex-page-search" class="bettercodex-input min-w-0 flex-1 bg-transparent text-base leading-[18px] text-token-input-foreground outline-none select-text placeholder:text-token-input-placeholder-foreground [&::placeholder]:select-none" type="search" placeholder="Search plugins" aria-label="Search BetterCodex">' +
+                '<button type="button" class="bettercodex-clear flex shrink-0 cursor-interaction text-token-text-secondary hover:text-token-foreground" data-clear-search aria-label="Clear search" hidden>' + clearIcon() + '</button>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+          '<div class="bettercodex-content mx-auto flex min-h-0 w-full max-w-[var(--thread-content-max-width)] flex-1 flex-col px-panel pt-5 pb-panel !pt-6"></div>' +
         '</div>' +
       '</section>';
     runtime.panel = root.querySelector(".bettercodex-panel");
     runtime.content = root.querySelector(".bettercodex-content");
-    runtime.activeTab = "store";
+    runtime.activeTab = "plugins";
     runtime.query = "";
     closeOnNavAway();
-    root.querySelector(".bettercodex-input").addEventListener("input", (event) => {
+    bindPanelControls();
+  }
+
+  function bindPanelControls() {
+    if (!runtime.panel || runtime.controlsBound) return;
+    runtime.controlsBound = true;
+    const input = runtime.panel.querySelector(".bettercodex-input");
+    const clear = runtime.panel.querySelector("[data-clear-search]");
+    input?.addEventListener("input", (event) => {
       runtime.query = event.currentTarget.value.trim();
+      updateSearchUi();
       renderCurrent();
     });
-    root.querySelectorAll("[data-tab]").forEach((button) => {
+    clear?.addEventListener("click", () => {
+      runtime.query = "";
+      if (input) input.value = "";
+      updateSearchUi();
+      renderCurrent();
+    });
+    runtime.panel.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => {
-        root.querySelectorAll("[data-tab]").forEach((item) => item.classList.toggle("active", item === button));
-        runtime.activeTab = button.dataset.tab;
+        setActiveTab(button.dataset.tab || "plugins");
         renderCurrent();
       });
     });
+  }
+
+  function topTabClass(active) {
+    return "bettercodex-tab" + (active ? " active" : "");
+  }
+
+  function setActiveTab(tab) {
+    runtime.activeTab = ["plugins", "themes"].includes(tab) ? tab : "plugins";
+    if (!runtime.panel) return;
+    runtime.panel.querySelectorAll("[data-tab]").forEach((button) => {
+      const active = button.dataset.tab === runtime.activeTab;
+      button.className = topTabClass(active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    updateSearchUi();
+  }
+
+  function updateSearchUi() {
+    if (!runtime.panel) return;
+    const input = runtime.panel.querySelector(".bettercodex-input");
+    const clear = runtime.panel.querySelector("[data-clear-search]");
+    const label = runtime.activeTab === "themes" ? "Search themes" : "Search plugins";
+    if (input) input.setAttribute("placeholder", label);
+    if (clear) clear.hidden = !(runtime.query || "").trim();
+  }
+
+  function searchIcon() {
+    return '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-sm text-token-text-secondary" aria-hidden="true"><path d="M9.25 15.5a6.25 6.25 0 1 1 0-12.5 6.25 6.25 0 0 1 0 12.5Zm4.62-1.63 3.38 3.38" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>';
+  }
+
+  function clearIcon() {
+    return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-sm" aria-hidden="true"><path d="m4.5 4.5 7 7m0-7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>';
   }
 
   function openPanel() {
@@ -681,51 +757,84 @@ function rendererRuntimeSource() {
 
   function renderCurrent() {
     if (!runtime.content) return;
-    if (runtime.activeTab === "themes") return renderLocal("themes");
-    if (runtime.activeTab === "plugins") return renderLocal("plugins");
-    return renderStore();
+    setActiveTab(runtime.activeTab || "plugins");
+    const token = (runtime.renderToken || 0) + 1;
+    runtime.renderToken = token;
+    return renderAddonPage(runtime.activeTab, token);
   }
 
-  function sectionHeader(text) {
-    return '<div class="bettercodex-sec">' + escapeHtml(text) + '</div>';
+  function isCurrentRender(token, tab) {
+    return runtime.renderToken === token && runtime.activeTab === tab && runtime.content;
+  }
+
+  function sectionHeader(text, accessory = "") {
+    return '<div class="bettercodex-section-heading"><h2 class="bettercodex-section-title">' + escapeHtml(text) + '</h2>' + accessory + '</div>';
+  }
+
+  function section(title, body, options = {}) {
+    const compact = options.compact ? " compact" : "";
+    return '<section class="bettercodex-section' + compact + '">' + sectionHeader(title, options.accessory || "") + body + '</section>';
   }
 
   function iconTile(name) {
     const letter = escapeHtml((String(name || "?").trim().charAt(0) || "?").toUpperCase());
-    return '<span class="bettercodex-ico flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-token-border-default text-token-text-secondary">' + letter + '</span>';
+    return '<span class="bettercodex-ico flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-token-text-secondary">' + letter + '</span>';
   }
 
-  async function renderStore() {
+  function visibleType(type) {
+    if (type === "theme") return "Theme";
+    if (type === "skill") return "Skill";
+    return "Plugin";
+  }
+
+  async function renderAddonPage(tab, token) {
     const content = runtime.content;
-    let payload = runtime.storePayload;
+    let payload = runtime.catalogPayload;
     if (!payload) {
-      content.innerHTML = '<div class="bettercodex-empty">Loading store…</div>';
+      content.innerHTML = '<div class="bettercodex-empty"><span class="loading-shimmer-pure-text font-medium">Loading plugins...</span></div>';
       try {
-        payload = await native.fetchStore();
-        runtime.storePayload = payload;
+        payload = await native.fetchCatalog();
+        if (!isCurrentRender(token, tab)) return;
+        runtime.catalogPayload = payload;
       } catch (error) {
-        content.innerHTML = '<div class="bettercodex-empty">Could not reach the BetterCodex store. ' + escapeHtml(error.message) + '</div>';
+        if (!isCurrentRender(token, tab)) return;
+        content.innerHTML = '<div class="bettercodex-empty">Could not reach the BetterCodex community catalog. ' + escapeHtml(error.message) + '</div>';
         return;
       }
     }
+    await reloadLocalAddons();
+    if (!isCurrentRender(token, tab)) return;
     const query = (runtime.query || "").toLowerCase();
+    const isThemes = tab === "themes";
+    const marketplaceTypes = isThemes ? ["theme"] : ["plugin", "skill"];
+    const localAddons = isThemes ? runtime.addons.themes : runtime.addons.plugins;
     const installed = new Set([...runtime.addons.plugins, ...runtime.addons.themes].map((addon) => addon.name));
-    const addons = (payload.addons || []).filter((addon) => {
-      if (!["plugin", "theme"].includes(addon.type)) return false;
+    const marketplace = (payload.addons || []).filter((addon) => {
+      if (!marketplaceTypes.includes(addon.type)) return false;
       const haystack = [addon.name, addon.author, addon.description, ...(addon.tags || [])].join(" ").toLowerCase();
       return !query || haystack.includes(query);
     });
-    if (!addons.length) {
-      content.innerHTML = sectionHeader("Store") + '<div class="bettercodex-empty">No store items match your search.</div>';
-      return;
-    }
-    content.innerHTML = sectionHeader("Available") + '<div class="bettercodex-list">' + addons.map((addon) => storeCard(addon, installed.has(addon.name))).join("") + '</div>';
+    const local = localAddons.filter((addon) => !query || (addon.name + " " + (addon.description || "")).toLowerCase().includes(query));
+    const marketplaceLabel = isThemes ? "Community themes" : "Community plugins";
+    const installedLabel = isThemes ? "Installed themes" : "Installed plugins";
+    const marketplaceBody = marketplace.length
+      ? '<div class="bettercodex-card-grid">' + marketplace.map((addon) => marketplaceCard(addon, installed.has(addon.name))).join("") + '</div>'
+      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' match your search.</div>';
+    const installedAccessory = '<button type="button" class="bettercodex-act" data-open-folder>Open folder</button>';
+    const installedBody = local.length
+      ? '<div class="bettercodex-list">' + local.map(localCard).join("") + '</div>'
+      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed yet. Browse community ' + escapeHtml(isThemes ? "themes" : "plugins") + ' to add some.</div>';
+    const marketplaceCount = '<span class="bettercodex-count">' + String(marketplace.length) + ' items</span>';
+    content.innerHTML = '<div class="bettercodex-section-stack">' +
+      section(marketplaceLabel, marketplaceBody, {accessory: marketplaceCount}) +
+      section(installedLabel, installedBody, {accessory: installedAccessory}) +
+    '</div>';
     content.querySelectorAll("[data-install]").forEach((button) => {
       button.addEventListener("click", async () => {
-        const addon = addons.find((item) => item.id === button.dataset.install);
+        const addon = marketplace.find((item) => item.id === button.dataset.install);
         if (!addon) return;
         button.disabled = true;
-        button.textContent = "Installing…";
+        button.textContent = "Installing...";
         try {
           await native.installAddon(addon);
           await reloadLocalAddons();
@@ -738,45 +847,36 @@ function rendererRuntimeSource() {
         }
       });
     });
-  }
-
-  async function renderLocal(tab) {
-    const content = runtime.content;
-    await reloadLocalAddons();
-    const query = (runtime.query || "").toLowerCase();
-    const all = tab === "themes" ? runtime.addons.themes : runtime.addons.plugins;
-    const list = all.filter((addon) => !query || (addon.name + " " + (addon.description || "")).toLowerCase().includes(query));
-    const heading = tab === "themes" ? "Installed themes" : "Installed plugins";
-    const folderRow = '<div class="bettercodex-section-row">' + sectionHeader(heading) + '<button class="bettercodex-act" data-open-folder>Open folder</button></div>';
-    content.innerHTML = folderRow + (list.length
-      ? '<div class="bettercodex-list">' + list.map(localCard).join("") + '</div>'
-      : '<div class="bettercodex-empty">No ' + escapeHtml(tab) + ' installed yet. Browse the Store tab to add some.</div>');
     content.querySelector("[data-open-folder]")?.addEventListener("click", () => native.openFolder(tab === "themes" ? "theme" : "plugin"));
     content.querySelectorAll("[data-toggle]").forEach((button) => {
       button.addEventListener("click", async () => {
         await native.setEnabled(button.dataset.name, button.dataset.enabled !== "true");
         await reloadLocalAddons();
-        renderLocal(tab);
+        renderCurrent();
       });
     });
   }
 
-  function storeCard(addon, isInstalled) {
-    const action = isInstalled
+  function marketplaceCard(addon, isInstalled) {
+    const action = addon.type === "skill"
       ? '<button class="bettercodex-act" disabled>Installed</button>'
-      : '<button class="bettercodex-act primary" data-install="' + escapeHtml(addon.id) + '">Install</button>';
-    return '<div class="bettercodex-row">' + iconTile(addon.name) +
-      '<div class="bettercodex-grow"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div>' +
-      '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.type + " by " + addon.author)) + '</div></div>' +
+      : isInstalled
+        ? '<button class="bettercodex-act" disabled>Installed</button>'
+        : '<button class="bettercodex-act primary" data-install="' + escapeHtml(addon.id) + '">Install</button>';
+    return '<div class="bettercodex-plugin-card group !cursor-interaction">' + iconTile(addon.name) +
+      '<div class="bettercodex-grow flex min-w-0 flex-1 justify-center gap-0.5 flex-col !gap-px">' +
+        '<div class="flex min-w-0 items-center gap-2"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + visibleType(addon.type) + '</span></div>' +
+        '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.type + " by " + addon.author)) + '</div>' +
+      '</div>' +
       action + '</div>';
   }
 
   function localCard(addon) {
     const toggle = '<button class="bettercodex-act' + (addon.enabled ? "" : " primary") + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(Boolean(addon.enabled)) + '">' + (addon.enabled ? "Enabled" : "Enable") + '</button>';
-    return '<div class="bettercodex-row">' + iconTile(addon.name) +
-      '<div class="bettercodex-grow"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div>' +
-      '<div class="bettercodex-desc">' + escapeHtml(addon.description || addon.fileName) + '</div></div>' +
-      toggle + '</div>';
+    return '<div class="bettercodex-list-item"><div class="bettercodex-row">' + iconTile(addon.name) +
+      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-0"><div class="flex min-w-0 items-baseline gap-2 text-base leading-6"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + escapeHtml(addon.fileName) + '</span></div>' +
+      '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
+      toggle + '</div></div>';
   }
 
   function createApi(runtime) {
