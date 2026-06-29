@@ -264,20 +264,21 @@ function betterCodexFrameCSS() {
     ".bettercodex-section-title{font-size:16px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit)}",
     ".bettercodex-section-accessory{display:flex;align-items:center;gap:10px;flex-shrink:0}",
     ".bettercodex-count{font-size:13px;line-height:22px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#8f8f8f))}",
-    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:16px}",
+    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));column-gap:28px;row-gap:16px}",
     "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
-    ".bettercodex-card{display:flex;min-height:63px;align-items:center;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
+    ".bettercodex-card{display:flex;min-height:92px;align-items:flex-start;border-radius:16px;padding:11px 10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
     ".bettercodex-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
-    ".bettercodex-ico{font-size:15px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
+    ".bettercodex-ico{margin-top:2px;font-size:15px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
     ".bettercodex-grow{min-width:0;flex:1}",
-    ".bettercodex-name{font-size:14px;line-height:21px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".bettercodex-desc{font-size:13px;line-height:21px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".bettercodex-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:14px;line-height:20px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden}",
+    ".bettercodex-file{font-size:12px;line-height:17px;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#8f8f8f));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+    ".bettercodex-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:19px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden}",
     ".bettercodex-act{flex-shrink:0;display:flex;align-items:center;height:28px;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:12.5px;background:transparent;color:var(--color-token-foreground,inherit);padding:0 10px;font:inherit;font-size:14px;line-height:18px;cursor:pointer}",
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
     ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
     ".bettercodex-act:disabled{opacity:.5;cursor:default}",
     ".bettercodex-icon-act{width:28px;justify-content:center;padding:0}",
-    ".bettercodex-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}",
+    ".bettercodex-actions{display:flex;align-self:center;align-items:center;gap:10px;flex-shrink:0}",
     ".bettercodex-switch{position:relative;display:inline-flex;width:34px;height:20px;flex-shrink:0;align-items:center;border:0;border-radius:999px;background:var(--color-token-border-default,#ffffff24);padding:2px;cursor:pointer;transition:background-color .12s ease}",
     ".bettercodex-switch[aria-checked='true']{background:var(--color-token-foreground,#f4f4f5)}",
     ".bettercodex-switch span{display:block;width:16px;height:16px;border-radius:999px;background:var(--color-token-main-surface-primary,#141414);box-shadow:0 1px 2px #00000040;transform:translateX(0);transition:transform .12s ease}",
@@ -854,7 +855,7 @@ function rendererRuntimeSource() {
     const enabled = Boolean(addon.enabled);
     const toggle = '<div class="bettercodex-actions"><button class="bettercodex-switch" type="button" role="switch" aria-label="' + escapeHtml((enabled ? "Disable " : "Enable ") + addon.name) + '" aria-checked="' + String(enabled) + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(enabled) + '"><span></span></button></div>';
     return '<div class="bettercodex-card group">' + iconTile(addon.name) +
-      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-0"><div class="flex min-w-0 items-baseline gap-2 text-base leading-6"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + escapeHtml(addon.fileName) + '</span></div>' +
+      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-1"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><div class="bettercodex-file">' + escapeHtml(addon.fileName) + '</div>' +
       '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
       toggle + '</div>';
   }
