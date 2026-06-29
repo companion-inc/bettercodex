@@ -15,7 +15,7 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
     catalogEndpoint: "https://catalog.example.test/api/addons",
   });
 
-  for (const filePath of [runtime.loaderPath, runtime.preloadPath, runtime.rendererPath]) {
+  for (const filePath of [runtime.loaderPath, runtime.preloadPath, runtime.rendererPath, runtime.repairPath]) {
     childProcess.execFileSync(process.execPath, ["--check", filePath], {stdio: "inherit"});
   }
 
@@ -25,8 +25,12 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("Community themes"), false);
   assert.equal(renderer.includes("Open Plugin Folder"), true);
   assert.equal(renderer.includes("bettercodex-card-grid"), true);
+  assert.equal(renderer.includes("<div class=\"bettercodex-file\">"), false);
   assert.equal(renderer.includes("bettercodex-status"), false);
   assert.equal(renderer.includes("bettercodex-switch"), true);
+  assert.equal(renderer.includes("suppressOtherNavActive"), true);
+  assert.equal(renderer.includes("bettercodex-native-active-muted"), true);
+  assert.equal(renderer.includes("No plugins installed yet. Add"), false);
   assert.equal(renderer.includes("pushState"), false);
   assert.equal(renderer.includes("replaceState"), false);
   assert.equal(renderer.includes("closest(\"nav, [role='navigation']\")"), true);
@@ -37,4 +41,8 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(config.catalogEndpoint, "https://catalog.example.test/api/addons");
   assert.equal(fs.existsSync(path.join(installRoot, "plugins")), true);
   assert.equal(fs.existsSync(path.join(installRoot, "themes")), true);
+
+  const repair = fs.readFileSync(runtime.repairPath, "utf8");
+  assert.equal(repair.includes("loader-missing-or-stale"), true);
+  assert.equal(repair.includes("ElectronAsarIntegrity:Resources/app.asar:hash"), true);
 });

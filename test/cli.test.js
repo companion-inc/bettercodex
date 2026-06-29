@@ -10,12 +10,14 @@ test("parseArgs keeps install restart-on by default", () => {
   assert.equal(parsed.command, "install");
   assert.equal(parsed.options.app, "/Applications/Codex.app");
   assert.equal(parsed.options.restart, true);
+  assert.equal(parsed.options.repairAgent, true);
 });
 
 test("parseArgs supports no-restart and custom marketplace API", () => {
   const parsed = parseArgs([
     "install",
     "--no-restart",
+    "--no-repair-agent",
     "--home",
     "/tmp/bettercodex",
     "--catalog",
@@ -23,7 +25,15 @@ test("parseArgs supports no-restart and custom marketplace API", () => {
   ]);
   assert.equal(parsed.options.home, "/tmp/bettercodex");
   assert.equal(parsed.options.restart, false);
+  assert.equal(parsed.options.repairAgent, false);
   assert.equal(parsed.options.catalog, "https://marketplace.example.test/api/addons");
+});
+
+test("parseArgs supports repair without restart by default", () => {
+  const parsed = parseArgs(["repair"]);
+  assert.equal(parsed.command, "repair");
+  assert.equal(parsed.options.restartRepair, false);
+  assert.equal(parsed.options.repairAgent, true);
 });
 
 test("parseArgs supports sibling bundle options", () => {

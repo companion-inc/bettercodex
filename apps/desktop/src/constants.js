@@ -8,6 +8,8 @@ const markerEnd = "/* bettercodex-loader:end */";
 const defaultAppRoot = process.env.CODEX_APP_ROOT || "/Applications/Codex.app";
 const codexHome = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
 const defaultInstallRoot = process.env.BETTERCODEX_HOME || path.join(codexHome, "bettercodex");
+const repairAgentLabel = "com.companion.bettercodex.repair";
+const repairAgentPath = path.join(os.homedir(), "Library", "LaunchAgents", `${repairAgentLabel}.plist`);
 const defaultCatalogEndpoint =
   process.env.BETTERCODEX_CATALOG_URL ||
   process.env.BETTERCODEX_STORE_URL ||
@@ -20,4 +22,6 @@ module.exports = {
   defaultCatalogEndpoint,
   markerEnd,
   markerStart,
+  repairAgentLabel,
+  repairAgentPath,
 };

@@ -27,6 +27,8 @@ npm run desktop:status
 npm run desktop -- install
 ```
 
+The desktop installer keeps add-ons and runtime files outside the app bundle under `~/.codex/bettercodex`. It also installs a per-user macOS LaunchAgent that runs a local repair check on login, every 120 seconds, and when Codex's `app.asar` or `Info.plist` changes. That repair path reapplies the small BetterCodex loader after Codex Desktop updates replace the app bundle.
+
 Desktop addons live in:
 
 ```text

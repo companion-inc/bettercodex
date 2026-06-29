@@ -33,6 +33,7 @@ function createBundle(options = {}) {
   const result = install({
     appRoot: destination,
     installRoot,
+    repairAgent: false,
     restart: false,
     catalogEndpoint: options.catalogEndpoint || options.storeEndpoint,
   });

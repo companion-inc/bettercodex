@@ -19,12 +19,31 @@ async function main(argv) {
         installRoot: options.home,
         restart: options.restart,
         catalogEndpoint: options.catalog,
+        repairAgent: options.repairAgent,
       });
       console.log(result.changed ? "BetterCodex installed." : result.message);
       console.log(`Install root: ${result.installRoot || options.home}`);
       console.log(`Catalog API: ${options.catalog}`);
+      if (result.repairAgent) {
+        console.log(`Repair agent: ${result.repairAgent.loaded ? "loaded" : result.repairAgent.installed ? "installed" : "not installed"}`);
+      }
       if (result.backupDir) {
         console.log(`Backup: ${result.backupDir}`);
+      }
+      return;
+    }
+    case "repair": {
+      const result = install({
+        appRoot: options.app,
+        installRoot: options.home,
+        restart: options.restartRepair,
+        catalogEndpoint: options.catalog,
+        repairAgent: options.repairAgent,
+      });
+      console.log(result.changed ? "BetterCodex repaired." : result.message);
+      console.log(`Install root: ${result.installRoot || options.home}`);
+      if (result.repairAgent) {
+        console.log(`Repair agent: ${result.repairAgent.loaded ? "loaded" : result.repairAgent.installed ? "installed" : "not installed"}`);
       }
       return;
     }
@@ -75,7 +94,9 @@ function parseArgs(argv) {
     destination: null,
     launch: false,
     replace: false,
+    repairAgent: true,
     restart: true,
+    restartRepair: false,
     catalog: defaultCatalogEndpoint,
   };
   let command = "help";
@@ -121,10 +142,16 @@ function parseArgs(argv) {
     }
     if (arg === "--restart") {
       options.restart = true;
+      options.restartRepair = true;
       continue;
     }
     if (arg === "--no-restart") {
       options.restart = false;
+      options.restartRepair = false;
+      continue;
+    }
+    if (arg === "--no-repair-agent") {
+      options.repairAgent = false;
       continue;
     }
     if (arg === "-h" || arg === "--help") {
@@ -152,6 +179,11 @@ function printStatus(status) {
   console.log(`Bundle id: ${status.bundleIdentifier || "unknown"}`);
   console.log(`Package main: ${status.packageMain}`);
   console.log(`Loader installed: ${status.loaderInstalled ? "yes" : "no"}`);
+  console.log(`Repair agent installed: ${status.repairAgent?.installed ? "yes" : "no"}`);
+  console.log(`Repair agent loaded: ${status.repairAgent?.loaded ? "yes" : "no"}`);
+  if (status.repairAgent?.plistPath) {
+    console.log(`Repair agent plist: ${status.repairAgent.plistPath}`);
+  }
   console.log(`ASAR integrity matches: ${status.integrityMatches ? "yes" : "no"}`);
   console.log(`Codesign valid: ${status.signatureValid ? "yes" : "no"}`);
   console.log(`ASAR archive sha256: ${status.asarHash}`);
@@ -165,6 +197,7 @@ function printHelp() {
 Commands:
   status              Inspect the local Codex Desktop app.
   install             Patch Codex Desktop and install the BetterCodex runtime.
+  repair              Re-check Codex Desktop and reinstall the loader after app updates.
   bundle              Create a sibling Codex-BetterCodex.app bundle for dev/safety.
   uninstall           Remove the BetterCodex loader from Codex Desktop.
   paths               Print app, data, plugin, theme, and marketplace paths.
@@ -179,6 +212,7 @@ Options:
   --launch            Launch the sibling bundle after creating it.
   --restart           Force restart Codex after install/uninstall. Default.
   --no-restart        Patch without restarting Codex.
+  --no-repair-agent   Do not install the background updater-repair LaunchAgent.
 `);
 }
 

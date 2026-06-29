@@ -35,6 +35,7 @@ codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-RuntimeSmok
 CDP screenshot/browser assertions against /tmp/Codex-BetterCodex-RuntimeSmoke.app
 node apps/desktop/bin/bettercodex.js install --no-restart
 node apps/desktop/bin/bettercodex.js status
+node apps/desktop/bin/bettercodex.js repair
 curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex E2E" --destination /tmp/Codex-BetterCodex-E2E.app --home /tmp/bettercodex-e2e-home --replace
 codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-E2E.app
@@ -46,12 +47,14 @@ node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex No Plugins" --de
 agent-browser CDP no-plugin/right-sidebar smoke against /tmp/Codex-BetterCodex-NoPlugins.app on port 9252
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Nav Close 2" --destination /tmp/Codex-BetterCodex-NavClose2.app --home /tmp/bettercodex-nav-close2-home --replace
 agent-browser CDP right-sidebar/chat-navigation smoke against /tmp/Codex-BetterCodex-NavClose2.app on port 9254
+node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex UI Native" --destination /tmp/Codex-BetterCodex-UINative.app --home /tmp/bettercodex-ui-native-home --replace
+agent-browser CDP native-plugin-page and BetterCodex UI comparison against /tmp/Codex-BetterCodex-UINative.app on ports 9255/9256
 ```
 
 Results:
 
 - Syntax and web typecheck passed.
-- Test suite passed: 17 tests.
+- Test suite passed: 18 tests.
 - npm audit passed: 0 vulnerabilities.
 - Codex-native skill pack validation passed.
 - Vite/React/shadcn web build passed and exported static assets to ignored `apps/web/out`.
@@ -66,15 +69,20 @@ Results:
 - Visual-fix evidence: `output/codex-ui-research/bettercodex-visual-fix-assertions.json`, `output/codex-ui-research/bettercodex-visual-fix-themes.json`, `output/codex-ui-research/bettercodex-visual-fix-enable.json`, and screenshots with the same prefix.
 - Starter desktop plugins were removed after review. Local BetterCodex profile has zero installed plugins; the Plugins page should render the empty installed state until the user adds their own `.plugin.js` file.
 - Plugin reload now stops running plugin instances whose files have been removed from the local plugin folder, so deleting a plugin file actually removes its live UI after the installed list refreshes.
+- Update survival is handled by a per-user macOS LaunchAgent at `~/Library/LaunchAgents/com.companion.bettercodex.repair.plist`; it runs the generated `~/.codex/bettercodex/runtime/repair.cjs` script on login, every 120 seconds, and when Codex's `app.asar` or `Info.plist` changes. The runtime, data, plugin, and theme folders stay outside `/Applications/Codex.app`.
 - BetterCodex no longer closes on Codex host history changes; right-side panel open/close should keep BetterCodex mounted like the native Plugins page. Leaving BetterCodex is handled by actual left-sidebar route clicks.
 - Left-sidebar chat/thread navigation now closes BetterCodex; native right-side panel toggles still keep BetterCodex mounted.
 - No-plugin/right-sidebar CDP smoke passed in `/tmp/Codex-BetterCodex-NoPlugins.app`: Plugins showed `0 installed` and the empty plugin state; toggling the native right side panel open and closed left BetterCodex mounted on the Plugins page. Screenshot evidence: `output/codex-ui-research/bettercodex-no-plugins-right-sidebar.png`.
 - Right-sidebar/chat-navigation CDP smoke passed in `/tmp/Codex-BetterCodex-NavClose2.app`: BetterCodex opened with `0 installed`, toggling the native `Toggle side panel` button left BetterCodex mounted, and clicking the left-sidebar chat row `Automate PR creation for companion` closed BetterCodex and cleared its active sidebar state.
+- Native Codex Plugins page was measured through the running renderer: content column `728px` inside `768px` shell, header type `28px/33.6px`, search `728x32`, tabs/buttons `28px` high, installed icons `44x44`, and marketplace grid columns `350px 350px`. Source screenshot: `output/codex-ui-research/native-codex-plugins.png`.
+- BetterCodex UI-native CDP smoke passed in `/tmp/Codex-BetterCodex-UINative.app`: the toolbar paints over the underlying Codex route, only `Plugins` and `Themes` are visible, only the BetterCodex sidebar row is active while open, zero-plugin empty state is a compact `44px` row, installed plugin cards render as `350x64` native-density rows, visible filenames are removed, right-side panel toggles keep BetterCodex open, and clicking native `Plugins` closes BetterCodex and restores native route state.
+- BetterCodex UI-native evidence: `output/codex-ui-research/bettercodex-native-zero-after.png` and `output/codex-ui-research/bettercodex-native-installed-after2.png`.
 - Hosted API responded with schema version `1` and addons from the `companion-inc/bettercodex-plugins` registry.
 - Community registry `companion-inc/bettercodex-plugins` includes starter Codex workflow skills and the `Focus Contrast` theme; it has zero desktop plugin packages.
 - Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded local add-ons from the installed folders, applied theme CSS through `BdApi.DOM`, and refreshed installed sections immediately.
 - E2E evidence: `output/codex-ui-research/bettercodex-e2e-report.json` and `output/codex-ui-research/bettercodex-e2e-installed-theme.png`.
 - BetterDiscord reference re-check used upstream commit `943944b`: current source still uses the injector/preload/renderer split, local plugin/theme folders, `BdApi` Addon/Data APIs, addon-store download-to-folder flow, and plugin/theme start/stop managers.
 - Official `/Applications/Codex.app` on disk is patched: loader `yes`, ASAR integrity `yes`, codesign `yes`.
+- Official `/Applications/Codex.app` has the BetterCodex repair agent installed and loaded.
 - Official runtime config uses `catalogEndpoint: https://bettercodex-web.companion-inc.workers.dev/api/addons`.
 - Current running Codex instances need a restart to load the refreshed runtime.

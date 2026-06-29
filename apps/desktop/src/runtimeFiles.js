@@ -26,13 +26,365 @@ function writeRuntimeFiles(installRoot, options = {}) {
   fs.writeFileSync(path.join(runtimeDir, "main.cjs"), mainRuntimeSource(), "utf8");
   fs.writeFileSync(path.join(runtimeDir, "preload.cjs"), preloadRuntimeSource(), "utf8");
   fs.writeFileSync(path.join(runtimeDir, "renderer.cjs"), rendererRuntimeSource(), "utf8");
+  fs.writeFileSync(path.join(runtimeDir, "repair.cjs"), repairRuntimeSource(), "utf8");
 
   return {
     configPath: path.join(runtimeDir, "config.json"),
     loaderPath: path.join(runtimeDir, "main.cjs"),
     preloadPath: path.join(runtimeDir, "preload.cjs"),
+    repairPath: path.join(runtimeDir, "repair.cjs"),
     rendererPath: path.join(runtimeDir, "renderer.cjs"),
   };
+}
+
+function repairRuntimeSource() {
+  return String.raw`#!/usr/bin/env node
+"use strict";
+
+const childProcess = require("node:child_process");
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const markerStart = "/* bettercodex-loader:start */";
+const markerEnd = "/* bettercodex-loader:end */";
+const defaultInstallRoot = path.resolve(__dirname, "..");
+
+function parseArgs(argv) {
+  const options = {
+    app: process.env.CODEX_APP_ROOT || "/Applications/Codex.app",
+    home: defaultInstallRoot,
+    quiet: false,
+    restart: false,
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === "--app") {
+      options.app = requireValue(argv, i, arg);
+      i += 1;
+      continue;
+    }
+    if (arg === "--home") {
+      options.home = requireValue(argv, i, arg);
+      i += 1;
+      continue;
+    }
+    if (arg === "--quiet") {
+      options.quiet = true;
+      continue;
+    }
+    if (arg === "--restart") {
+      options.restart = true;
+      continue;
+    }
+    throw new Error("Unknown option: " + arg);
+  }
+  return options;
+}
+
+function requireValue(argv, index, flag) {
+  const value = argv[index + 1];
+  if (!value || value.startsWith("-")) throw new Error(flag + " requires a value");
+  return value;
+}
+
+function repair(options = {}) {
+  const installRoot = path.resolve(options.home || defaultInstallRoot);
+  const paths = resolveAppPaths(options.app || "/Applications/Codex.app");
+  assertCodexApp(paths);
+
+  const loaderPath = path.join(installRoot, "runtime", "main.cjs");
+  if (!fs.existsSync(loaderPath)) throw new Error("BetterCodex runtime loader not found: " + loaderPath);
+
+  const archive = readArchive(paths.asarPath);
+  const pkg = JSON.parse(readText(archive, "/package.json"));
+  const bootstrapPath = "/" + pkg.main;
+  const originalBootstrap = readText(archive, bootstrapPath);
+  const nextBootstrap = patchBootstrapSource(originalBootstrap, loaderPath);
+  const originalHeaderHash = archiveHeaderSha256(paths.asarPath);
+  const plistHeaderHash = readPlistAsarHash(paths.infoPlistPath);
+
+  let changed = false;
+  let backupDir = null;
+  let finalHeaderHash = originalHeaderHash;
+  if (nextBootstrap !== originalBootstrap) {
+    backupDir = backupAppState(paths, installRoot, {
+      repairedAt: new Date().toISOString(),
+      reason: "loader-missing-or-stale",
+      version: pkg.version || null,
+      asarHeaderHash: originalHeaderHash,
+    });
+    const nextAsar = writeArchiveWithChanges(archive, new Map([[bootstrapPath, nextBootstrap]]));
+    writeArchive(paths.asarPath, nextAsar);
+    finalHeaderHash = asarHeaderSha256(nextAsar);
+    changed = true;
+  }
+
+  const needsIntegrityRepair = readPlistAsarHash(paths.infoPlistPath) !== finalHeaderHash;
+  const needsSignatureRepair = !verifyApp(paths.appRoot);
+  if (changed || needsIntegrityRepair) {
+    updatePlistAsarHash(paths.infoPlistPath, finalHeaderHash);
+  }
+  if (changed || needsIntegrityRepair || needsSignatureRepair) {
+    signAndVerify(paths.appRoot);
+    changed = true;
+  }
+
+  const result = {
+    appRoot: paths.appRoot,
+    backupDir,
+    changed,
+    loaderInstalled: true,
+    originalHeaderHash,
+    patchedHeaderHash: finalHeaderHash,
+    plistHeaderHashBefore: plistHeaderHash,
+    version: pkg.version || null,
+  };
+  writeRepairState(installRoot, result);
+  log(installRoot, (changed ? "repaired " : "ok ") + paths.appRoot + " " + finalHeaderHash);
+  if (changed && options.restart) restartCodex(paths);
+  return result;
+}
+
+function resolveAppPaths(appRoot) {
+  return {
+    appRoot,
+    asarPath: path.join(appRoot, "Contents", "Resources", "app.asar"),
+    infoPlistPath: path.join(appRoot, "Contents", "Info.plist"),
+  };
+}
+
+function assertCodexApp(paths) {
+  if (!fs.existsSync(paths.appRoot)) throw new Error("Codex app not found: " + paths.appRoot);
+  if (!fs.existsSync(paths.asarPath)) throw new Error("Codex app.asar not found: " + paths.asarPath);
+  if (!fs.existsSync(paths.infoPlistPath)) throw new Error("Codex Info.plist not found: " + paths.infoPlistPath);
+  const bundleId = readPlistValue(paths.infoPlistPath, "CFBundleIdentifier");
+  if (bundleId !== "com.openai.codex" && !String(bundleId || "").startsWith("com.openai.codex.")) {
+    throw new Error("Expected Codex bundle id, found " + (bundleId || "unknown"));
+  }
+}
+
+function patchBootstrapSource(source, loaderPath) {
+  const block = [
+    markerStart,
+    "try {",
+    "  require(" + JSON.stringify(loaderPath) + ");",
+    "} catch (error) {",
+    "  console.error('[BetterCodex] failed to load runtime', error);",
+    "}",
+    markerEnd,
+    "",
+  ].join("\n");
+  if (hasLoader(source)) return source.replace(loaderRegex(), block);
+  return block + source;
+}
+
+function hasLoader(source) {
+  return source.includes(markerStart) && source.includes(markerEnd);
+}
+
+function loaderRegex() {
+  return new RegExp(escapeRegex(markerStart) + "[\\s\\S]*?" + escapeRegex(markerEnd) + "\\n?\\n?", "m");
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^$()|[\]\\{}]/g, "\\$&");
+}
+
+function readArchive(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  const jsonLength = buffer.readUInt32LE(12);
+  const header = JSON.parse(buffer.subarray(16, 16 + jsonLength).toString("utf8"));
+  const bodyOffset = 8 + buffer.readUInt32LE(4);
+  return {bodyOffset, buffer, filePath, header};
+}
+
+function readText(archive, filePath) {
+  return readFile(archive, filePath).toString("utf8");
+}
+
+function readFile(archive, filePath) {
+  const entry = getFileEntry(archive.header, filePath);
+  const start = archive.bodyOffset + Number(entry.offset || 0);
+  return archive.buffer.subarray(start, start + Number(entry.size || 0));
+}
+
+function getFileEntry(header, filePath) {
+  const parts = normalizeAsarPath(filePath).split("/").filter(Boolean);
+  let node = header;
+  for (const part of parts) {
+    node = node.files && node.files[part];
+    if (!node) throw new Error("ASAR entry not found: " + filePath);
+  }
+  if (node.files || node.unpacked) throw new Error("ASAR entry is not a packed file: " + filePath);
+  return node;
+}
+
+function writeArchiveWithChanges(archive, changes) {
+  const header = JSON.parse(JSON.stringify(archive.header));
+  const files = collectFiles(header).sort((a, b) => Number(a.entry.offset || 0) - Number(b.entry.offset || 0));
+  let offset = 0;
+  const chunks = [];
+  for (const file of files) {
+    const normalized = "/" + file.path;
+    const replacement = changes.has(normalized) ? changes.get(normalized) : changes.get(file.path);
+    const content = replacement === undefined ? readFile(archive, normalized) : Buffer.from(String(replacement), "utf8");
+    file.entry.offset = String(offset);
+    file.entry.size = content.length;
+    chunks.push(content);
+    offset += content.length;
+  }
+  return Buffer.concat([makeHeader(header), ...chunks]);
+}
+
+function collectFiles(header, base = "") {
+  const result = [];
+  for (const [name, entry] of Object.entries(header.files || {})) {
+    const filePath = base ? base + "/" + name : name;
+    if (entry.files) result.push(...collectFiles(entry, filePath));
+    else if (!entry.unpacked) result.push({path: filePath, entry});
+  }
+  return result;
+}
+
+function makeHeader(header) {
+  const json = Buffer.from(JSON.stringify(header), "utf8");
+  const padding = (4 - (json.length % 4)) % 4;
+  const pickleSize = 4 + json.length + padding;
+  const headerSize = 4 + pickleSize;
+  const buffer = Buffer.alloc(8 + headerSize);
+  buffer.writeUInt32LE(4, 0);
+  buffer.writeUInt32LE(headerSize, 4);
+  buffer.writeUInt32LE(pickleSize, 8);
+  buffer.writeUInt32LE(json.length, 12);
+  json.copy(buffer, 16);
+  return buffer;
+}
+
+function normalizeAsarPath(filePath) {
+  return filePath.split(path.sep).join("/").replace(/^\/+/, "");
+}
+
+function writeArchive(filePath, buffer) {
+  fs.writeFileSync(filePath, buffer);
+}
+
+function sha256(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+function asarHeaderSha256(buffer) {
+  const jsonLength = buffer.readUInt32LE(12);
+  return sha256(buffer.subarray(16, 16 + jsonLength));
+}
+
+function archiveHeaderSha256(filePath) {
+  return asarHeaderSha256(fs.readFileSync(filePath));
+}
+
+function backupAppState(paths, installRoot, metadata) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupDir = path.join(installRoot, "backups", timestamp + "-repair");
+  fs.mkdirSync(backupDir, {recursive: true});
+  fs.copyFileSync(paths.asarPath, path.join(backupDir, "app.asar"));
+  fs.copyFileSync(paths.infoPlistPath, path.join(backupDir, "Info.plist"));
+  fs.writeFileSync(path.join(backupDir, "manifest.json"), JSON.stringify({appRoot: paths.appRoot, ...metadata}, null, 2) + "\n", "utf8");
+  return backupDir;
+}
+
+function readPlistValue(infoPlistPath, key) {
+  try {
+    return childProcess.execFileSync("/usr/libexec/PlistBuddy", ["-c", "Print :" + key, infoPlistPath], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function readPlistAsarHash(infoPlistPath) {
+  try {
+    return childProcess.execFileSync(
+      "/usr/libexec/PlistBuddy",
+      ["-c", "Print :ElectronAsarIntegrity:Resources/app.asar:hash", infoPlistPath],
+      {encoding: "utf8", stdio: ["ignore", "pipe", "ignore"]},
+    ).trim();
+  } catch {
+    return null;
+  }
+}
+
+function updatePlistAsarHash(infoPlistPath, hash) {
+  childProcess.execFileSync(
+    "/usr/libexec/PlistBuddy",
+    ["-c", "Set :ElectronAsarIntegrity:Resources/app.asar:hash " + hash, infoPlistPath],
+    {stdio: "ignore"},
+  );
+}
+
+function verifyApp(appRoot) {
+  try {
+    childProcess.execFileSync("/usr/bin/codesign", ["--verify", "--deep", "--strict", "--verbose=2", appRoot], {stdio: "ignore"});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function signAndVerify(appRoot) {
+  childProcess.execFileSync("/usr/bin/codesign", ["--force", "--sign", "-", appRoot], {stdio: "ignore"});
+  childProcess.execFileSync("/usr/bin/codesign", ["--verify", "--deep", "--strict", "--verbose=2", appRoot], {stdio: "ignore"});
+}
+
+function restartCodex(paths) {
+  const currentPid = String(process.pid);
+  try {
+    const output = childProcess.execFileSync("/bin/ps", ["axo", "pid=,command="], {encoding: "utf8"});
+    for (const line of output.split("\n")) {
+      const match = line.trim().match(/^(\d+)\s+(.*)$/);
+      if (!match || match[1] === currentPid) continue;
+      if (match[2].includes(paths.appRoot + "/Contents/MacOS/Codex")) {
+        try { process.kill(Number(match[1]), "SIGKILL"); } catch {}
+      }
+    }
+  } catch {}
+  childProcess.spawnSync("/usr/bin/open", ["-a", paths.appRoot], {detached: true, stdio: "ignore"});
+}
+
+function writeRepairState(installRoot, result) {
+  const dataDir = path.join(installRoot, "data");
+  fs.mkdirSync(dataDir, {recursive: true});
+  fs.writeFileSync(path.join(dataDir, "repair.json"), JSON.stringify({...result, checkedAt: new Date().toISOString()}, null, 2) + "\n", "utf8");
+}
+
+function log(installRoot, message) {
+  try {
+    const logDir = path.join(installRoot, "logs");
+    fs.mkdirSync(logDir, {recursive: true});
+    fs.appendFileSync(path.join(logDir, "repair.log"), "[" + new Date().toISOString() + "] " + message + "\n", "utf8");
+  } catch {}
+}
+
+if (require.main === module) {
+  let options = null;
+  try {
+    options = parseArgs(process.argv.slice(2));
+    const result = repair(options);
+    if (!options.quiet) console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    const installRoot = options && options.home ? options.home : defaultInstallRoot;
+    log(installRoot, "failed " + (error && error.message ? error.message : String(error)));
+    if (!options || !options.quiet) console.error(error && error.message ? error.message : error);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = {
+  parseArgs,
+  repair,
+};
+`;
 }
 
 function mainRuntimeSource() {
@@ -245,10 +597,11 @@ function assertSafeFileName(fileName) {
 function betterCodexFrameCSS() {
   return [
     "#bettercodex-root{font:inherit}",
-    ".bettercodex-panel{display:none;overflow:hidden;color:var(--color-token-foreground,inherit);font-size:14px;line-height:21px}",
+    ".bettercodex-panel{display:none;overflow:hidden;background:var(--color-token-main-surface-primary,#181818);color:var(--color-token-foreground,inherit);font-size:14px;line-height:21px;isolation:isolate}",
     "#bettercodex-nav-item.bettercodex-active{background:var(--color-token-list-hover-background,#ffffff14)}",
+    ".bettercodex-native-active-muted{background:transparent!important}",
     ".bettercodex-panel.bettercodex-open{display:flex;flex-direction:column;min-height:0}",
-    ".bettercodex-toolbar{height:46px;margin-left:16px;padding-right:8px;display:flex;align-items:center;gap:8px;user-select:none;contain:layout paint}",
+    ".bettercodex-toolbar{position:relative;z-index:2;height:46px;margin-left:16px;padding-right:8px;display:flex;align-items:center;gap:8px;background:var(--color-token-main-surface-primary,#181818);user-select:none;contain:layout paint}",
     ".bettercodex-toolbar-tabs{display:inline-flex;align-items:center;gap:2px}",
     ".bettercodex-tab{border:1px solid transparent;border-radius:12.5px;height:28px;padding:0 8px;background:transparent;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#8f8f8f));font:inherit;font-size:14px;line-height:18px;cursor:pointer;white-space:nowrap}",
     ".bettercodex-tab:hover{background:var(--color-token-list-hover-background,#ffffff12);color:var(--color-token-foreground,inherit)}",
@@ -264,15 +617,15 @@ function betterCodexFrameCSS() {
     ".bettercodex-section-title{font-size:16px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit)}",
     ".bettercodex-section-accessory{display:flex;align-items:center;gap:10px;flex-shrink:0}",
     ".bettercodex-count{font-size:13px;line-height:22px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#8f8f8f))}",
-    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));column-gap:28px;row-gap:16px}",
+    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,350px),1fr));column-gap:28px;row-gap:16px}",
     "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
-    ".bettercodex-card{display:flex;min-height:92px;align-items:flex-start;border-radius:16px;padding:11px 10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
+    ".bettercodex-card{display:flex;min-height:63px;align-items:center;justify-content:center;border:0;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
     ".bettercodex-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
-    ".bettercodex-ico{margin-top:2px;font-size:15px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
+    ".bettercodex-ico{width:44px!important;height:44px!important;margin-top:0;font-size:14px;font-weight:600;border-radius:12px;background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
     ".bettercodex-grow{min-width:0;flex:1}",
+    ".bettercodex-card .bettercodex-grow{min-height:43px;justify-content:center;gap:1px!important}",
     ".bettercodex-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:14px;line-height:20px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden}",
-    ".bettercodex-file{font-size:12px;line-height:17px;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#8f8f8f));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".bettercodex-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:13px;line-height:19px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden}",
+    ".bettercodex-desc{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;font-size:14px;line-height:18px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden}",
     ".bettercodex-act{flex-shrink:0;display:flex;align-items:center;height:28px;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:12.5px;background:transparent;color:var(--color-token-foreground,inherit);padding:0 10px;font:inherit;font-size:14px;line-height:18px;cursor:pointer}",
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
     ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
@@ -284,7 +637,7 @@ function betterCodexFrameCSS() {
     ".bettercodex-switch span{display:block;width:16px;height:16px;border-radius:999px;background:var(--color-token-main-surface-primary,#141414);box-shadow:0 1px 2px #00000040;transform:translateX(0);transition:transform .12s ease}",
     ".bettercodex-switch[aria-checked='true'] span{transform:translateX(14px)}",
     ".bettercodex-switch:disabled{opacity:.5;cursor:default}",
-    ".bettercodex-empty{display:flex;min-height:160px;align-items:center;justify-content:center;text-align:center;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#9ca3af));font-size:14px}",
+    ".bettercodex-empty{display:flex;min-height:44px;align-items:center;justify-content:flex-start;padding:0 8px;text-align:left;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#9ca3af));font-size:14px;line-height:21px}",
     ".bettercodex-toast{position:fixed;right:18px;bottom:18px;z-index:2147483647;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:10px;background:var(--color-token-main-surface-primary,#1a1a1a);color:var(--color-token-foreground,inherit);padding:10px 12px;box-shadow:0 12px 40px #00000040}"
   ].join("\n");
 }
@@ -413,6 +766,33 @@ function rendererRuntimeSource() {
       item.removeAttribute("aria-current");
       item.classList.remove("bettercodex-active");
     }
+  }
+
+  function suppressOtherNavActive() {
+    restoreOtherNavActive();
+    runtime.suppressedNav = [];
+    for (const item of document.querySelectorAll("nav button[aria-current='page'], [role='navigation'] button[aria-current='page'], nav button.bg-token-list-hover-background, [role='navigation'] button.bg-token-list-hover-background")) {
+      if (item.id === "bettercodex-nav-item" || item.closest("#bettercodex-root")) continue;
+      runtime.suppressedNav.push({
+        item,
+        className: item.className,
+        ariaCurrent: item.getAttribute("aria-current"),
+      });
+      item.removeAttribute("aria-current");
+      item.classList.remove("bg-token-list-hover-background");
+      item.classList.add("bettercodex-native-active-muted");
+    }
+  }
+
+  function restoreOtherNavActive() {
+    if (!runtime.suppressedNav) return;
+    for (const entry of runtime.suppressedNav) {
+      if (!entry.item || !document.contains(entry.item)) continue;
+      entry.item.className = entry.className;
+      if (entry.ariaCurrent) entry.item.setAttribute("aria-current", entry.ariaCurrent);
+      else entry.item.removeAttribute("aria-current");
+    }
+    runtime.suppressedNav = [];
   }
 
   // Codex's CSP silently drops webContents.insertCSS and <style> tags. A constructable
@@ -577,7 +957,7 @@ function rendererRuntimeSource() {
       if (!routeTarget) return;
       const navigation = target.closest("nav, [role='navigation']");
       if (!navigation) return;
-      closePanel();
+      closePanel({restoreNative: false});
     }, true);
   }
 
@@ -691,7 +1071,7 @@ function rendererRuntimeSource() {
     const subtitle = runtime.panel.querySelector(".bettercodex-subtitle");
     const isThemes = runtime.activeTab === "themes";
     if (title) title.textContent = isThemes ? "Themes" : "Plugins";
-    if (subtitle) subtitle.textContent = isThemes ? "Installed BetterCodex themes" : "Installed BetterCodex plugins";
+    if (subtitle) subtitle.textContent = isThemes ? "Customize Codex with local themes" : "Customize Codex with local plugins";
   }
 
   function updateSearchUi() {
@@ -726,14 +1106,17 @@ function rendererRuntimeSource() {
       s.background = "var(--color-token-main-surface-primary, #1a1a1a)";
     }
     runtime.panel.classList.add("bettercodex-open");
+    suppressOtherNavActive();
     setNavActive(true);
     renderCurrent();
   }
 
-  function closePanel() {
+  function closePanel(options = {}) {
     if (!runtime.panel) return;
     runtime.panel.classList.remove("bettercodex-open");
     setNavActive(false);
+    if (options.restoreNative !== false) restoreOtherNavActive();
+    else runtime.suppressedNav = [];
     if (runtime.containerObserver) { runtime.containerObserver.disconnect(); runtime.containerObserver = null; }
     runtime.openLocation = null;
     parkPanel();
@@ -816,7 +1199,7 @@ function rendererRuntimeSource() {
     const installedAccessory = '<button type="button" class="bettercodex-act bettercodex-icon-act" data-open-folder aria-label="' + folderLabel + '" title="' + folderLabel + '">' + folderIcon() + '</button>';
     const installedBody = local.length
       ? '<div class="bettercodex-card-grid">' + local.map(localCard).join("") + '</div>'
-      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed yet. Add ' + escapeHtml(isThemes ? ".theme.css" : ".plugin.js") + ' files to the ' + escapeHtml(isThemes ? "theme" : "plugin") + ' folder.</div>';
+      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed</div>';
     const installedCount = '<span class="bettercodex-count">' + String(local.length) + ' installed</span>';
     content.innerHTML = '<div class="bettercodex-section-stack">' +
       section(installedLabel, installedBody, {accessory: installedCount + installedAccessory}) +
@@ -835,7 +1218,7 @@ function rendererRuntimeSource() {
     const enabled = Boolean(addon.enabled);
     const toggle = '<div class="bettercodex-actions"><button class="bettercodex-switch" type="button" role="switch" aria-label="' + escapeHtml((enabled ? "Disable " : "Enable ") + addon.name) + '" aria-checked="' + String(enabled) + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(enabled) + '"><span></span></button></div>';
     return '<div class="bettercodex-card group">' + iconTile(addon.name) +
-      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-1"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><div class="bettercodex-file">' + escapeHtml(addon.fileName) + '</div>' +
+      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-1" title="' + escapeHtml(addon.fileName) + '"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div>' +
       '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
       toggle + '</div>';
   }

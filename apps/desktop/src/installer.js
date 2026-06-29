@@ -14,7 +14,7 @@ const {
   writeArchiveWithChanges,
 } = require("./asar");
 const {hasLoader, patchBootstrapSource, stripLoader} = require("./bootstrapPatch");
-const {defaultAppRoot, defaultInstallRoot} = require("./constants");
+const {defaultAppRoot, defaultInstallRoot, repairAgentLabel, repairAgentPath} = require("./constants");
 const {writeRuntimeFiles} = require("./runtimeFiles");
 
 function resolveAppPaths(appRoot = defaultAppRoot) {
@@ -48,6 +48,7 @@ function inspect(appRoot = defaultAppRoot) {
     loaderInstalled: hasLoader(bootstrap),
     packageMain: pkg.main,
     plistAsarHash: plistHash,
+    repairAgent: inspectRepairAgent(),
     signatureValid: verifyApp(paths.appRoot),
     version: pkg.version || null,
   };
@@ -72,6 +73,12 @@ function install(options = {}) {
   const originalHeaderHash = archiveHeaderSha256(paths.asarPath);
 
   if (nextBootstrap === originalBootstrap) {
+    const repairAgent = options.repairAgent === false ? inspectRepairAgent() : installRepairAgent({
+      appRoot,
+      installRoot,
+      nodePath: process.execPath,
+      repairPath: runtime.repairPath,
+    });
     writeManifest(installRoot, {
       appRoot,
       bootstrapPath,
@@ -82,6 +89,7 @@ function install(options = {}) {
       patchedAsarHash: originalHash,
       patchedAsarHeaderHash: originalHeaderHash,
       catalogEndpoint: catalogEndpoint || null,
+      repairAgent,
       version: pkg.version || null,
     });
     if (options.restart) {
@@ -92,6 +100,7 @@ function install(options = {}) {
       installRoot,
       loaderPath: runtime.loaderPath,
       message: "BetterCodex runtime refreshed; app.asar already has the loader",
+      repairAgent,
     };
   }
 
@@ -107,6 +116,12 @@ function install(options = {}) {
   const patchedHeaderHash = asarHeaderSha256(nextAsar);
   updatePlistAsarHash(paths.infoPlistPath, patchedHeaderHash);
   signAndVerify(paths.appRoot);
+  const repairAgent = options.repairAgent === false ? inspectRepairAgent() : installRepairAgent({
+    appRoot,
+    installRoot,
+    nodePath: process.execPath,
+    repairPath: runtime.repairPath,
+  });
 
   writeManifest(installRoot, {
     appRoot,
@@ -119,6 +134,7 @@ function install(options = {}) {
     patchedAsarHash: patchedHash,
     patchedAsarHeaderHash: patchedHeaderHash,
     catalogEndpoint: catalogEndpoint || null,
+    repairAgent,
     version: pkg.version || null,
   });
 
@@ -133,6 +149,7 @@ function install(options = {}) {
     loaderPath: runtime.loaderPath,
     patchedHash,
     patchedHeaderHash,
+    repairAgent,
   };
 }
 
@@ -149,12 +166,15 @@ function uninstall(options = {}) {
   const nextBootstrap = stripLoader(originalBootstrap);
 
   if (nextBootstrap === originalBootstrap) {
+    const repairAgent = removeRepairAgent();
     return {
       changed: false,
       message: "BetterCodex loader is not installed in app.asar",
+      repairAgent,
     };
   }
 
+  removeRepairAgent();
   backupAppState(paths, installRoot, {
     asarHash: fileSha256(paths.asarPath),
     asarHeaderHash: archiveHeaderSha256(paths.asarPath),
@@ -220,6 +240,130 @@ function writeManifest(installRoot, manifest) {
     `${JSON.stringify(manifest, null, 2)}\n`,
     "utf8",
   );
+}
+
+function installRepairAgent({appRoot, installRoot, nodePath, repairPath}) {
+  if (process.platform !== "darwin") {
+    return {installed: false, loaded: false, plistPath: null, reason: "unsupported-platform"};
+  }
+  const logDir = path.join(installRoot, "logs");
+  fs.mkdirSync(path.dirname(repairAgentPath), {recursive: true});
+  fs.mkdirSync(logDir, {recursive: true});
+  const plist = repairAgentPlist({
+    appRoot,
+    installRoot,
+    nodePath,
+    repairPath,
+    stderrPath: path.join(logDir, "repair.err.log"),
+    stdoutPath: path.join(logDir, "repair.out.log"),
+  });
+  fs.writeFileSync(repairAgentPath, plist, "utf8");
+  reloadRepairAgent();
+  return inspectRepairAgent();
+}
+
+function removeRepairAgent() {
+  if (process.platform !== "darwin") return {installed: false, loaded: false, plistPath: null};
+  unloadRepairAgent();
+  try {
+    fs.rmSync(repairAgentPath, {force: true});
+  } catch {}
+  return inspectRepairAgent();
+}
+
+function inspectRepairAgent() {
+  if (process.platform !== "darwin") {
+    return {installed: false, loaded: false, plistPath: null, reason: "unsupported-platform"};
+  }
+  const installed = fs.existsSync(repairAgentPath);
+  return {
+    installed,
+    label: repairAgentLabel,
+    loaded: installed && isRepairAgentLoaded(),
+    plistPath: repairAgentPath,
+  };
+}
+
+function repairAgentPlist({appRoot, installRoot, nodePath, repairPath, stderrPath, stdoutPath}) {
+  const watchPaths = [
+    path.join(appRoot, "Contents", "Info.plist"),
+    path.join(appRoot, "Contents", "Resources", "app.asar"),
+  ];
+  const args = [
+    nodePath,
+    repairPath,
+    "--app",
+    appRoot,
+    "--home",
+    installRoot,
+    "--quiet",
+  ];
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    '  <key>Label</key>',
+    `  <string>${escapePlist(repairAgentLabel)}</string>`,
+    '  <key>ProgramArguments</key>',
+    '  <array>',
+    ...args.map((value) => `    <string>${escapePlist(value)}</string>`),
+    '  </array>',
+    '  <key>RunAtLoad</key>',
+    '  <true/>',
+    '  <key>StartInterval</key>',
+    '  <integer>120</integer>',
+    '  <key>WatchPaths</key>',
+    '  <array>',
+    ...watchPaths.map((value) => `    <string>${escapePlist(value)}</string>`),
+    '  </array>',
+    '  <key>StandardOutPath</key>',
+    `  <string>${escapePlist(stdoutPath)}</string>`,
+    '  <key>StandardErrorPath</key>',
+    `  <string>${escapePlist(stderrPath)}</string>`,
+    '</dict>',
+    '</plist>',
+    '',
+  ].join("\n");
+}
+
+function reloadRepairAgent() {
+  unloadRepairAgent();
+  const domain = launchAgentDomain();
+  try {
+    childProcess.execFileSync("/bin/launchctl", ["bootstrap", domain, repairAgentPath], {stdio: "ignore"});
+  } catch {}
+  try {
+    childProcess.execFileSync("/bin/launchctl", ["kickstart", "-k", `${domain}/${repairAgentLabel}`], {stdio: "ignore"});
+  } catch {}
+}
+
+function unloadRepairAgent() {
+  try {
+    childProcess.execFileSync("/bin/launchctl", ["bootout", launchAgentDomain(), repairAgentPath], {stdio: "ignore"});
+  } catch {}
+}
+
+function isRepairAgentLoaded() {
+  try {
+    childProcess.execFileSync("/bin/launchctl", ["print", `${launchAgentDomain()}/${repairAgentLabel}`], {stdio: "ignore"});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function launchAgentDomain() {
+  return `gui/${process.getuid()}`;
+}
+
+function escapePlist(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 function readPlistValue(infoPlistPath, key) {
@@ -307,9 +451,12 @@ function restartCodex(paths) {
 module.exports = {
   assertCodexApp,
   inspect,
+  inspectRepairAgent,
   install,
+  installRepairAgent,
   isCodexBundleIdentifier,
   readPlistAsarHash,
+  removeRepairAgent,
   resolveAppPaths,
   uninstall,
 };
