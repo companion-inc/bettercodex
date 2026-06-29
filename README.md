@@ -34,7 +34,7 @@ Desktop addons live in:
 ~/.codex/bettercodex/themes
 ```
 
-Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Plugins and Themes pages fetch the hosted marketplace API and install selected files into those folders. The pages inherit Codex token colors, borders, typography, and surfaces so they read as part of Codex rather than as a separate website frame.
+Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Plugins and Themes pages manage installed local files in those folders, with search, open-folder actions, installed status, and enable/disable switches. The hosted web/API surface is the distribution catalog; the desktop page stays an installed add-on manager.
 
 ## Hosted Web/API
 

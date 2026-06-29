@@ -19,6 +19,13 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
     childProcess.execFileSync(process.execPath, ["--check", filePath], {stdio: "inherit"});
   }
 
+  const renderer = fs.readFileSync(runtime.rendererPath, "utf8");
+  assert.equal(renderer.includes("data-install"), false);
+  assert.equal(renderer.includes("Community plugins"), false);
+  assert.equal(renderer.includes("Community themes"), false);
+  assert.equal(renderer.includes("Open Plugin Folder"), true);
+  assert.equal(renderer.includes("bettercodex-switch"), true);
+
   const config = JSON.parse(fs.readFileSync(runtime.configPath, "utf8"));
   assert.equal(config.catalogEndpoint, "https://catalog.example.test/api/addons");
   assert.equal(fs.existsSync(path.join(installRoot, "plugins")), true);

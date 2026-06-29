@@ -262,11 +262,8 @@ function betterCodexFrameCSS() {
     ".bettercodex-section.compact{gap:4px}",
     ".bettercodex-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-token-border-light,var(--color-token-border-default,#ffffff14));padding:0 2px 8px 8px}",
     ".bettercodex-section-title{font-size:16px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit)}",
+    ".bettercodex-section-accessory{display:flex;align-items:center;gap:10px;flex-shrink:0}",
     ".bettercodex-count{font-size:13px;line-height:22px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#8f8f8f))}",
-    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:16px}",
-    "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
-    ".bettercodex-plugin-card{display:flex;min-height:63px;align-items:center;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:pointer}",
-    ".bettercodex-plugin-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
     ".bettercodex-list{display:flex;flex-direction:column}",
     ".bettercodex-section-row{display:flex;align-items:center;justify-content:space-between;gap:12px}",
     ".bettercodex-list-item{position:relative}",
@@ -282,6 +279,13 @@ function betterCodexFrameCSS() {
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
     ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
     ".bettercodex-act:disabled{opacity:.5;cursor:default}",
+    ".bettercodex-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}",
+    ".bettercodex-status{display:flex;align-items:center;height:22px;border-radius:999px;background:var(--color-token-foreground-5,rgba(255,255,255,.05));padding:0 8px;font-size:12px;line-height:16px;color:var(--color-token-text-secondary,#9ca3af)}",
+    ".bettercodex-switch{position:relative;display:inline-flex;width:34px;height:20px;flex-shrink:0;align-items:center;border:0;border-radius:999px;background:var(--color-token-border-default,#ffffff24);padding:2px;cursor:pointer;transition:background-color .12s ease}",
+    ".bettercodex-switch[aria-checked='true']{background:var(--color-token-foreground,#f4f4f5)}",
+    ".bettercodex-switch span{display:block;width:16px;height:16px;border-radius:999px;background:var(--color-token-main-surface-primary,#141414);box-shadow:0 1px 2px #00000040;transform:translateX(0);transition:transform .12s ease}",
+    ".bettercodex-switch[aria-checked='true'] span{transform:translateX(14px)}",
+    ".bettercodex-switch:disabled{opacity:.5;cursor:default}",
     ".bettercodex-empty{display:flex;min-height:160px;align-items:center;justify-content:center;text-align:center;color:var(--color-token-text-tertiary,var(--color-token-text-secondary,#9ca3af));font-size:14px}",
     ".bettercodex-toast{position:fixed;right:18px;bottom:18px;z-index:2147483647;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:10px;background:var(--color-token-main-surface-primary,#1a1a1a);color:var(--color-token-foreground,inherit);padding:10px 12px;box-shadow:0 12px 40px #00000040}"
   ].join("\n");
@@ -561,16 +565,19 @@ function rendererRuntimeSource() {
     runtime.styles.delete(name);
   }
 
-  // Native-feeling dismissal: Codex owns navigation. Any host click outside the BetterCodex
-  // page means the user is leaving, so we remove our page before Codex's React route renders.
-  function closeOnNavAway() {
-    if (runtime.navAwayBound) return;
-    runtime.navAwayBound = true;
+  // Native-feeling dismissal: a normal page does not close when the user clicks empty space
+  // or a control inside the page. It only leaves when a real Codex sidebar route is chosen.
+  function closeOnSidebarNavigation() {
+    if (runtime.sidebarNavigationBound) return;
+    runtime.sidebarNavigationBound = true;
     document.addEventListener("click", (event) => {
       if (!runtime.panel || !runtime.panel.classList.contains("bettercodex-open")) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target.closest("[data-bettercodex-nav='true']") || target.closest(".bettercodex-panel")) return;
+      const button = target.closest("button, a");
+      if (!button) return;
+      if (!/h-\[var\(--height-token-row\)\]/.test(button.className || "")) return;
       closePanel();
     }, true);
   }
@@ -635,8 +642,8 @@ function rendererRuntimeSource() {
         '<div class="bettercodex-scroll">' +
           '<div class="mx-auto w-full max-w-[var(--thread-content-max-width)] px-panel pt-panel pb-4">' +
             '<div class="flex flex-col gap-2 px-2">' +
-              '<h1 class="heading-xl font-normal text-token-foreground">BetterCodex</h1>' +
-              '<p class="text-lg leading-6 text-token-text-secondary">Community plugins and themes for Codex</p>' +
+              '<h1 class="bettercodex-title heading-xl font-normal text-token-foreground">Plugins</h1>' +
+              '<p class="bettercodex-subtitle text-lg leading-6 text-token-text-secondary">Installed BetterCodex plugins</p>' +
             '</div>' +
           '</div>' +
           '<div class="bettercodex-search-shell">' +
@@ -655,8 +662,9 @@ function rendererRuntimeSource() {
     runtime.content = root.querySelector(".bettercodex-content");
     runtime.activeTab = "plugins";
     runtime.query = "";
-    closeOnNavAway();
+    closeOnSidebarNavigation();
     bindPanelControls();
+    updatePageHeader();
   }
 
   function bindPanelControls() {
@@ -695,7 +703,17 @@ function rendererRuntimeSource() {
       button.className = topTabClass(active);
       button.setAttribute("aria-selected", String(active));
     });
+    updatePageHeader();
     updateSearchUi();
+  }
+
+  function updatePageHeader() {
+    if (!runtime.panel) return;
+    const title = runtime.panel.querySelector(".bettercodex-title");
+    const subtitle = runtime.panel.querySelector(".bettercodex-subtitle");
+    const isThemes = runtime.activeTab === "themes";
+    if (title) title.textContent = isThemes ? "Themes" : "Plugins";
+    if (subtitle) subtitle.textContent = isThemes ? "Installed BetterCodex themes" : "Installed BetterCodex plugins";
   }
 
   function updateSearchUi() {
@@ -789,7 +807,8 @@ function rendererRuntimeSource() {
   }
 
   function sectionHeader(text, accessory = "") {
-    return '<div class="bettercodex-section-heading"><h2 class="bettercodex-section-title">' + escapeHtml(text) + '</h2>' + accessory + '</div>';
+    const right = accessory ? '<div class="bettercodex-section-accessory">' + accessory + '</div>' : "";
+    return '<div class="bettercodex-section-heading"><h2 class="bettercodex-section-title">' + escapeHtml(text) + '</h2>' + right + '</div>';
   }
 
   function section(title, body, options = {}) {
@@ -802,73 +821,28 @@ function rendererRuntimeSource() {
     return '<span class="bettercodex-ico flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-token-text-secondary">' + letter + '</span>';
   }
 
-  function visibleType(type) {
-    if (type === "theme") return "Theme";
-    if (type === "skill") return "Skill";
-    return "Plugin";
-  }
-
   async function renderAddonPage(tab, token) {
     const content = runtime.content;
-    let payload = runtime.catalogPayload;
-    if (!payload) {
-      content.innerHTML = '<div class="bettercodex-empty"><span class="loading-shimmer-pure-text font-medium">Loading plugins...</span></div>';
-      try {
-        payload = await native.fetchCatalog();
-        if (!isCurrentRender(token, tab)) return;
-        runtime.catalogPayload = payload;
-      } catch (error) {
-        if (!isCurrentRender(token, tab)) return;
-        content.innerHTML = '<div class="bettercodex-empty">Could not reach the BetterCodex community catalog. ' + escapeHtml(error.message) + '</div>';
-        return;
-      }
-    }
+    content.innerHTML = '<div class="bettercodex-empty"><span class="loading-shimmer-pure-text font-medium">Loading installed add-ons...</span></div>';
     await reloadLocalAddons();
     if (!isCurrentRender(token, tab)) return;
     const query = (runtime.query || "").toLowerCase();
     const isThemes = tab === "themes";
-    const marketplaceTypes = isThemes ? ["theme"] : ["plugin", "skill"];
     const localAddons = isThemes ? runtime.addons.themes : runtime.addons.plugins;
-    const installed = new Set([...runtime.addons.plugins, ...runtime.addons.themes].map((addon) => addon.name));
-    const marketplace = (payload.addons || []).filter((addon) => {
-      if (!marketplaceTypes.includes(addon.type)) return false;
-      const haystack = [addon.name, addon.author, addon.description, ...(addon.tags || [])].join(" ").toLowerCase();
+    const local = localAddons.filter((addon) => {
+      const haystack = [addon.name, addon.fileName, addon.author, addon.description].join(" ").toLowerCase();
       return !query || haystack.includes(query);
     });
-    const local = localAddons.filter((addon) => !query || (addon.name + " " + (addon.description || "")).toLowerCase().includes(query));
-    const marketplaceLabel = isThemes ? "Community themes" : "Community plugins";
     const installedLabel = isThemes ? "Installed themes" : "Installed plugins";
-    const marketplaceBody = marketplace.length
-      ? '<div class="bettercodex-card-grid">' + marketplace.map((addon) => marketplaceCard(addon, installed.has(addon.name))).join("") + '</div>'
-      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' match your search.</div>';
-    const installedAccessory = '<button type="button" class="bettercodex-act" data-open-folder>Open folder</button>';
+    const folderLabel = isThemes ? "Open Theme Folder" : "Open Plugin Folder";
+    const installedAccessory = '<button type="button" class="bettercodex-act" data-open-folder>' + folderLabel + '</button>';
     const installedBody = local.length
       ? '<div class="bettercodex-list">' + local.map(localCard).join("") + '</div>'
-      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed yet. Browse community ' + escapeHtml(isThemes ? "themes" : "plugins") + ' to add some.</div>';
-    const marketplaceCount = '<span class="bettercodex-count">' + String(marketplace.length) + ' items</span>';
+      : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed yet. Add ' + escapeHtml(isThemes ? ".theme.css" : ".plugin.js") + ' files to the ' + escapeHtml(isThemes ? "theme" : "plugin") + ' folder.</div>';
+    const installedCount = '<span class="bettercodex-count">' + String(local.length) + ' installed</span>';
     content.innerHTML = '<div class="bettercodex-section-stack">' +
-      section(marketplaceLabel, marketplaceBody, {accessory: marketplaceCount}) +
-      section(installedLabel, installedBody, {accessory: installedAccessory}) +
+      section(installedLabel, installedBody, {accessory: installedCount + installedAccessory}) +
     '</div>';
-    content.querySelectorAll("[data-install]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const addon = marketplace.find((item) => item.id === button.dataset.install);
-        if (!addon) return;
-        button.disabled = true;
-        button.textContent = "Installing...";
-        try {
-          await native.installAddon(addon);
-          await reloadLocalAddons();
-          button.textContent = "Installed";
-          showToast(addon.name + " installed");
-          renderCurrent();
-        } catch (error) {
-          button.disabled = false;
-          button.textContent = "Install";
-          showToast(error.message);
-        }
-      });
-    });
     content.querySelector("[data-open-folder]")?.addEventListener("click", () => native.openFolder(tab === "themes" ? "theme" : "plugin"));
     content.querySelectorAll("[data-toggle]").forEach((button) => {
       button.addEventListener("click", async () => {
@@ -879,22 +853,9 @@ function rendererRuntimeSource() {
     });
   }
 
-  function marketplaceCard(addon, isInstalled) {
-    const action = addon.type === "skill"
-      ? '<button class="bettercodex-act" disabled>Installed</button>'
-      : isInstalled
-        ? '<button class="bettercodex-act" disabled>Installed</button>'
-        : '<button class="bettercodex-act primary" data-install="' + escapeHtml(addon.id) + '">Install</button>';
-    return '<div class="bettercodex-plugin-card group !cursor-interaction">' + iconTile(addon.name) +
-      '<div class="bettercodex-grow flex min-w-0 flex-1 justify-center gap-0.5 flex-col !gap-px">' +
-        '<div class="flex min-w-0 items-center gap-2"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + visibleType(addon.type) + '</span></div>' +
-        '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.type + " by " + addon.author)) + '</div>' +
-      '</div>' +
-      action + '</div>';
-  }
-
   function localCard(addon) {
-    const toggle = '<button class="bettercodex-act' + (addon.enabled ? "" : " primary") + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(Boolean(addon.enabled)) + '">' + (addon.enabled ? "Enabled" : "Enable") + '</button>';
+    const enabled = Boolean(addon.enabled);
+    const toggle = '<div class="bettercodex-actions"><span class="bettercodex-status">Installed</span><button class="bettercodex-switch" type="button" role="switch" aria-label="' + escapeHtml((enabled ? "Disable " : "Enable ") + addon.name) + '" aria-checked="' + String(enabled) + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(enabled) + '"><span></span></button></div>';
     return '<div class="bettercodex-list-item"><div class="bettercodex-row">' + iconTile(addon.name) +
       '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-0"><div class="flex min-w-0 items-baseline gap-2 text-base leading-6"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + escapeHtml(addon.fileName) + '</span></div>' +
       '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
