@@ -36,6 +36,9 @@ CDP screenshot/browser assertions against /tmp/Codex-BetterCodex-RuntimeSmoke.ap
 node apps/desktop/bin/bettercodex.js install --no-restart
 node apps/desktop/bin/bettercodex.js status
 curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
+node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex E2E" --destination /tmp/Codex-BetterCodex-E2E.app --home /tmp/bettercodex-e2e-home --replace
+codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-E2E.app
+agent-browser CDP smoke against /tmp/Codex-BetterCodex-E2E.app on port 9242
 ```
 
 Results:
@@ -50,7 +53,11 @@ Results:
 - Disposable `/tmp/Codex-BetterCodex-RuntimeSmoke.app` patched successfully and passed codesign verification.
 - CDP rendered BetterCodex inside the disposable Codex app: top tabs are only `Plugins` and `Themes`; Plugins shows `Community plugins` and `Installed plugins`; Themes shows `Community themes` and `Installed themes`; the old extra catalog tab and command-copy action are absent.
 - Starter skill cards render as disabled `Installed` status buttons; search filters to `Repo Warmup`; native Codex `Plugins` navigation closes the BetterCodex panel and clears the BetterCodex active state.
-- Hosted API responded with schema version `1` and skill addons `failing-test-first, pr-ready, repo-warmup, thread-checkpoint`.
+- Hosted API responded with schema version `1` and addons `failing-test-first, focus-contrast, hello-codex, pr-ready, repo-warmup, thread-checkpoint`.
+- Community registry `companion-inc/bettercodex-plugins` includes starter addon code for `Hello Codex` (`.plugin.js`), `Focus Contrast` (`.theme.css`), and four Codex skills; registry CI passed on commit `64f5bfb`.
+- Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, `Hello Codex` installed from the hosted catalog, wrote `plugins/hello-codex.plugin.js`, started immediately, rendered the `BetterCodex` button, persisted `clicks = 1` through `BdApi.Data`, then `Focus Contrast` installed, wrote `themes/focus-contrast.theme.css`, applied `--bettercodex-focus-ring`, and refreshed the `Installed themes` section immediately.
+- E2E evidence: `output/codex-ui-research/bettercodex-e2e-report.json` and `output/codex-ui-research/bettercodex-e2e-installed-theme.png`.
+- BetterDiscord reference re-check used upstream commit `943944b`: current source still uses the injector/preload/renderer split, local plugin/theme folders, `BdApi` Addon/Data APIs, addon-store download-to-folder flow, and plugin/theme start/stop managers.
 - Official `/Applications/Codex.app` on disk is patched: loader `yes`, ASAR integrity `yes`, codesign `yes`.
 - Official runtime config uses `catalogEndpoint: https://bettercodex-web.companion-inc.workers.dev/api/addons`.
 - Current running Codex instances need a restart to load the refreshed runtime.

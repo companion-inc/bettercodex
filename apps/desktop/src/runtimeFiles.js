@@ -123,6 +123,7 @@ function registerIpc(ipcMain, shell) {
   ipcMain.handle("bettercodex:listAddons", () => listAddons());
   ipcMain.handle("bettercodex:readAddon", (event, kind, fileName) => readAddon(kind, fileName));
   ipcMain.handle("bettercodex:installAddon", (event, addon) => installAddon(addon));
+  ipcMain.handle("bettercodex:runPlugin", (event, fileName, pluginName) => runPlugin(event.sender, fileName, pluginName));
   ipcMain.handle("bettercodex:setEnabled", (event, name, enabled) => setEnabled(name, enabled));
   ipcMain.handle("bettercodex:openFolder", (event, kind) => shell.openPath(kind === "theme" ? config.themeDir : config.pluginDir));
 }
@@ -175,6 +176,34 @@ function readAddon(kind, fileName) {
   assertSafeFileName(fileName);
   const folder = kind === "theme" ? config.themeDir : config.pluginDir;
   return fs.readFileSync(path.join(folder, fileName), "utf8");
+}
+
+async function runPlugin(webContents, fileName, pluginName) {
+  assertSafeFileName(fileName);
+  if (!fileName.endsWith(".plugin.js")) throw new Error("Plugin files must end with .plugin.js");
+  const source = fs.readFileSync(path.join(config.pluginDir, fileName), "utf8");
+  const name = String(pluginName || parseMeta(source, fileName).name || fileName);
+  return webContents.executeJavaScript(pluginRunnerSource(name, source), true);
+}
+
+function pluginRunnerSource(pluginName, source) {
+  return [
+    "(async () => {",
+    "  const pluginName = " + JSON.stringify(pluginName) + ";",
+    "  if (!window.BetterCodex || !window.BdApi) throw new Error('BetterCodex runtime is not ready');",
+    "  if (window.BetterCodex.plugins.has(pluginName)) return true;",
+    "  const module = {exports: {}};",
+    "  const exports = module.exports;",
+    "  const BdApi = window.BdApi(pluginName);",
+    source,
+    "  const exported = module.exports;",
+    "  const instance = typeof exported === 'function' ? new exported() : exported;",
+    "  if (!instance || typeof instance.start !== 'function' || typeof instance.stop !== 'function') throw new Error(pluginName + ' must export start() and stop()');",
+    "  await instance.start();",
+    "  window.BetterCodex.plugins.set(pluginName, instance);",
+    "  return true;",
+    "})()",
+  ].join("\n");
 }
 
 function setEnabled(name, enabled) {
@@ -277,6 +306,7 @@ try {
     listAddons: () => ipcRenderer.invoke("bettercodex:listAddons"),
     readAddon: (kind, fileName) => ipcRenderer.invoke("bettercodex:readAddon", kind, fileName),
     installAddon: (addon) => ipcRenderer.invoke("bettercodex:installAddon", addon),
+    runPlugin: (fileName, pluginName) => ipcRenderer.invoke("bettercodex:runPlugin", fileName, pluginName),
     setEnabled: (name, enabled) => ipcRenderer.invoke("bettercodex:setEnabled", name, enabled),
     openFolder: (kind) => ipcRenderer.invoke("bettercodex:openFolder", kind),
   });
@@ -492,23 +522,14 @@ function rendererRuntimeSource() {
           stopPlugin(plugin.name);
         }
       } catch (error) {
-        // Codex CSP blocks new Function(); a plugin that can't run must not break BetterCodex.
+        // A plugin that can't run must not break BetterCodex itself.
         console.error("[BetterCodex] plugin failed:", plugin.name, error && error.message);
       }
     }
   }
 
   async function startPlugin(plugin) {
-    const source = await native.readAddon("plugin", plugin.fileName);
-    const module = {exports: {}};
-    const runner = new Function("module", "exports", "BdApi", source + "\nreturn module.exports;");
-    const exported = runner(module, module.exports, new BdApi(plugin.name));
-    const instance = typeof exported === "function" ? new exported() : exported;
-    if (!instance || typeof instance.start !== "function" || typeof instance.stop !== "function") {
-      throw new Error(plugin.name + " must export start() and stop()");
-    }
-    instance.start();
-    runtime.plugins.set(plugin.name, instance);
+    await native.runPlugin(plugin.fileName, plugin.name);
   }
 
   function stopPlugin(name) {
@@ -840,6 +861,7 @@ function rendererRuntimeSource() {
           await reloadLocalAddons();
           button.textContent = "Installed";
           showToast(addon.name + " installed");
+          renderCurrent();
         } catch (error) {
           button.disabled = false;
           button.textContent = "Install";
@@ -888,9 +910,9 @@ function rendererRuntimeSource() {
           removeStyle(id) { removeStyle(id || pluginName); },
         },
         Data: {
-          load() { return null; },
-          save() {},
-          delete() {},
+          load(key) { return loadPluginData(pluginName, key); },
+          save(key, value) { return savePluginData(pluginName, key, value); },
+          delete(key) { return deletePluginData(pluginName, key); },
         },
         Logger: {
           log: (...args) => console.log("[" + pluginName + "]", ...args),
@@ -925,6 +947,40 @@ function rendererRuntimeSource() {
     api.Themes = api("BetterCodex").Themes;
     api.UI = api("BetterCodex").UI;
     return api;
+
+    function dataKey(pluginName, key) {
+      return "bettercodex:data:" + encodeURIComponent(pluginName) + ":" + encodeURIComponent(String(key || "default"));
+    }
+
+    function loadPluginData(pluginName, key) {
+      try {
+        const value = window.localStorage.getItem(dataKey(pluginName, key));
+        return value === null ? null : JSON.parse(value);
+      } catch (error) {
+        console.warn("[BetterCodex] failed to load plugin data", pluginName, key, error && error.message);
+        return null;
+      }
+    }
+
+    function savePluginData(pluginName, key, value) {
+      try {
+        window.localStorage.setItem(dataKey(pluginName, key), JSON.stringify(value));
+        return value;
+      } catch (error) {
+        console.warn("[BetterCodex] failed to save plugin data", pluginName, key, error && error.message);
+        return null;
+      }
+    }
+
+    function deletePluginData(pluginName, key) {
+      try {
+        window.localStorage.removeItem(dataKey(pluginName, key));
+        return true;
+      } catch (error) {
+        console.warn("[BetterCodex] failed to delete plugin data", pluginName, key, error && error.message);
+        return false;
+      }
+    }
 
     function patch(owner, mode, object, method, callback) {
       if (!object || typeof object[method] !== "function") throw new Error("Target method not found");
