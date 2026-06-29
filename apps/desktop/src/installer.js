@@ -83,6 +83,9 @@ function install(options = {}) {
       storeEndpoint: options.storeEndpoint || null,
       version: pkg.version || null,
     });
+    if (options.restart) {
+      restartCodex(paths);
+    }
     return {
       changed: false,
       installRoot,
