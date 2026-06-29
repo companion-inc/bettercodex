@@ -24,6 +24,8 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("Community plugins"), false);
   assert.equal(renderer.includes("Community themes"), false);
   assert.equal(renderer.includes("Open Plugin Folder"), true);
+  assert.equal(renderer.includes("bettercodex-card-grid"), true);
+  assert.equal(renderer.includes("bettercodex-status"), false);
   assert.equal(renderer.includes("bettercodex-switch"), true);
 
   const config = JSON.parse(fs.readFileSync(runtime.configPath, "utf8"));

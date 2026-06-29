@@ -264,14 +264,11 @@ function betterCodexFrameCSS() {
     ".bettercodex-section-title{font-size:16px;line-height:24px;font-weight:500;color:var(--color-token-foreground,inherit)}",
     ".bettercodex-section-accessory{display:flex;align-items:center;gap:10px;flex-shrink:0}",
     ".bettercodex-count{font-size:13px;line-height:22px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#8f8f8f))}",
-    ".bettercodex-list{display:flex;flex-direction:column}",
-    ".bettercodex-section-row{display:flex;align-items:center;justify-content:space-between;gap:12px}",
-    ".bettercodex-list-item{position:relative}",
-    ".bettercodex-list-item::before{content:'';position:absolute;left:12px;right:12px;top:0;height:1px;background:var(--color-token-border-light,var(--color-token-border-default,#ffffff14))}",
-    ".bettercodex-list-item:first-child::before{display:none}",
-    ".bettercodex-row{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;width:100%;border-radius:12.5px;padding:12px;text-align:left}",
-    ".bettercodex-row:hover{background:var(--color-token-list-active-selection-background,var(--color-token-list-hover-background,#ffffff0d))}",
-    ".bettercodex-ico{font-size:16px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
+    ".bettercodex-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px;row-gap:16px}",
+    "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
+    ".bettercodex-card{display:flex;min-height:63px;align-items:center;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
+    ".bettercodex-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
+    ".bettercodex-ico{font-size:15px;font-weight:600;background:var(--color-token-list-hover-background,#ffffff0d)}",
     ".bettercodex-grow{min-width:0;flex:1}",
     ".bettercodex-name{font-size:14px;line-height:21px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
     ".bettercodex-desc{font-size:13px;line-height:21px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
@@ -279,8 +276,8 @@ function betterCodexFrameCSS() {
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
     ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
     ".bettercodex-act:disabled{opacity:.5;cursor:default}",
+    ".bettercodex-icon-act{width:28px;justify-content:center;padding:0}",
     ".bettercodex-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}",
-    ".bettercodex-status{display:flex;align-items:center;height:22px;border-radius:999px;background:var(--color-token-foreground-5,rgba(255,255,255,.05));padding:0 8px;font-size:12px;line-height:16px;color:var(--color-token-text-secondary,#9ca3af)}",
     ".bettercodex-switch{position:relative;display:inline-flex;width:34px;height:20px;flex-shrink:0;align-items:center;border:0;border-radius:999px;background:var(--color-token-border-default,#ffffff24);padding:2px;cursor:pointer;transition:background-color .12s ease}",
     ".bettercodex-switch[aria-checked='true']{background:var(--color-token-foreground,#f4f4f5)}",
     ".bettercodex-switch span{display:block;width:16px;height:16px;border-radius:999px;background:var(--color-token-main-surface-primary,#141414);box-shadow:0 1px 2px #00000040;transform:translateX(0);transition:transform .12s ease}",
@@ -818,7 +815,7 @@ function rendererRuntimeSource() {
 
   function iconTile(name) {
     const letter = escapeHtml((String(name || "?").trim().charAt(0) || "?").toUpperCase());
-    return '<span class="bettercodex-ico flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-token-text-secondary">' + letter + '</span>';
+    return '<span class="bettercodex-ico flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-token-text-secondary">' + letter + '</span>';
   }
 
   async function renderAddonPage(tab, token) {
@@ -833,11 +830,11 @@ function rendererRuntimeSource() {
       const haystack = [addon.name, addon.fileName, addon.author, addon.description].join(" ").toLowerCase();
       return !query || haystack.includes(query);
     });
-    const installedLabel = isThemes ? "Installed themes" : "Installed plugins";
+    const installedLabel = "Installed";
     const folderLabel = isThemes ? "Open Theme Folder" : "Open Plugin Folder";
-    const installedAccessory = '<button type="button" class="bettercodex-act" data-open-folder>' + folderLabel + '</button>';
+    const installedAccessory = '<button type="button" class="bettercodex-act bettercodex-icon-act" data-open-folder aria-label="' + folderLabel + '" title="' + folderLabel + '">' + folderIcon() + '</button>';
     const installedBody = local.length
-      ? '<div class="bettercodex-list">' + local.map(localCard).join("") + '</div>'
+      ? '<div class="bettercodex-card-grid">' + local.map(localCard).join("") + '</div>'
       : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed yet. Add ' + escapeHtml(isThemes ? ".theme.css" : ".plugin.js") + ' files to the ' + escapeHtml(isThemes ? "theme" : "plugin") + ' folder.</div>';
     const installedCount = '<span class="bettercodex-count">' + String(local.length) + ' installed</span>';
     content.innerHTML = '<div class="bettercodex-section-stack">' +
@@ -855,11 +852,15 @@ function rendererRuntimeSource() {
 
   function localCard(addon) {
     const enabled = Boolean(addon.enabled);
-    const toggle = '<div class="bettercodex-actions"><span class="bettercodex-status">Installed</span><button class="bettercodex-switch" type="button" role="switch" aria-label="' + escapeHtml((enabled ? "Disable " : "Enable ") + addon.name) + '" aria-checked="' + String(enabled) + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(enabled) + '"><span></span></button></div>';
-    return '<div class="bettercodex-list-item"><div class="bettercodex-row">' + iconTile(addon.name) +
+    const toggle = '<div class="bettercodex-actions"><button class="bettercodex-switch" type="button" role="switch" aria-label="' + escapeHtml((enabled ? "Disable " : "Enable ") + addon.name) + '" aria-checked="' + String(enabled) + '" data-toggle data-name="' + escapeHtml(addon.name) + '" data-enabled="' + String(enabled) + '"><span></span></button></div>';
+    return '<div class="bettercodex-card group">' + iconTile(addon.name) +
       '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-0"><div class="flex min-w-0 items-baseline gap-2 text-base leading-6"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div><span class="bettercodex-count">' + escapeHtml(addon.fileName) + '</span></div>' +
       '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
-      toggle + '</div></div>';
+      toggle + '</div>';
+  }
+
+  function folderIcon() {
+    return '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-sm" aria-hidden="true"><path d="M3.25 6.75A2.25 2.25 0 0 1 5.5 4.5h3.05c.47 0 .92.18 1.26.5l.9.85c.2.19.46.3.74.3h3.05a2.25 2.25 0 0 1 2.25 2.25v4.85a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 3.25 13.25v-6.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg>';
   }
 
   function createApi(runtime) {
