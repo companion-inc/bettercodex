@@ -392,10 +392,6 @@ function rendererRuntimeSource() {
     if (runtime.containerObserver || !runtime.container || !runtime.container.parentElement) return;
     runtime.containerObserver = new MutationObserver(() => {
       if (!runtime.panel || !runtime.panel.classList.contains("bettercodex-open")) return;
-      if (runtime.openLocation && location.href !== runtime.openLocation) {
-        closePanel();
-        return;
-      }
       if (!document.contains(runtime.container)) runtime.container = findContentEl();
       if (runtime.container && runtime.panel.parentElement !== runtime.container) {
         runtime.panel.style.background = effectiveBg(runtime.container);
@@ -528,6 +524,10 @@ function rendererRuntimeSource() {
         console.error("[BetterCodex] plugin failed:", plugin.name, error && error.message);
       }
     }
+    const localPluginNames = new Set(runtime.addons.plugins.map((plugin) => plugin.name));
+    for (const name of Array.from(runtime.plugins.keys())) {
+      if (!localPluginNames.has(name)) stopPlugin(name);
+    }
   }
 
   async function startPlugin(plugin) {
@@ -583,29 +583,8 @@ function rendererRuntimeSource() {
   function bindHostNavigationTeardown() {
     if (runtime.hostNavigationBound) return;
     runtime.hostNavigationBound = true;
-
-    const closeForHostNavigation = () => {
-      if (runtime.panel && runtime.panel.classList.contains("bettercodex-open")) closePanel();
-    };
-
-    for (const method of ["pushState", "replaceState"]) {
-      try {
-        const original = history[method];
-        if (typeof original !== "function" || original.__bettercodexWrapped) continue;
-        const wrapped = function bettercodexHistoryWrapper(...args) {
-          const before = location.href;
-          const result = original.apply(this, args);
-          if (location.href !== before) queueMicrotask(closeForHostNavigation);
-          return result;
-        };
-        wrapped.__bettercodexWrapped = true;
-        wrapped.__bettercodexOriginal = original;
-        history[method] = wrapped;
-      } catch (error) { /* popstate/hashchange still cover browser navigation */ }
-    }
-
-    window.addEventListener("popstate", closeForHostNavigation, true);
-    window.addEventListener("hashchange", closeForHostNavigation, true);
+    // Codex uses history state for non-route UI, including the right side panel.
+    // BetterCodex leaves only when a real left-sidebar route is clicked.
   }
 
   function ensureRoot() {

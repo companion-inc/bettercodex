@@ -42,8 +42,8 @@ agent-browser CDP smoke against /tmp/Codex-BetterCodex-E2E.app on port 9242
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Installed Only" --destination /tmp/Codex-BetterCodex-InstalledOnly.app --home /tmp/bettercodex-installed-only-home --replace
 codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-InstalledOnly.app
 agent-browser CDP installed-only smoke against /tmp/Codex-BetterCodex-InstalledOnly.app on port 9244
-node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Starters 2" --destination /tmp/Codex-BetterCodex-Starters2.app --home /tmp/bettercodex-starters2-home --replace
-agent-browser CDP starter-plugin smoke against /tmp/Codex-BetterCodex-Starters2.app on port 9251
+node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex No Plugins" --destination /tmp/Codex-BetterCodex-NoPlugins.app --home /tmp/bettercodex-no-plugins-home --replace
+agent-browser CDP no-plugin/right-sidebar smoke against /tmp/Codex-BetterCodex-NoPlugins.app on port 9252
 ```
 
 Results:
@@ -62,12 +62,13 @@ Results:
 - Installed-only evidence: `output/codex-ui-research/bettercodex-installed-only-assertions.json`, `output/codex-ui-research/bettercodex-installed-only-enable.json`, `output/codex-ui-research/bettercodex-installed-only-themes.json`, `output/codex-ui-research/bettercodex-installed-only-clickout.json`, and screenshots with the same prefix.
 - Visual-fix CDP smoke passed in `/tmp/Codex-BetterCodex-VisualFix.app`: Plugins and Themes both render one compact installed card, no status pill, no catalog/install controls, icon-only folder actions with accessible folder labels, and the plugin switch still starts the local plugin.
 - Visual-fix evidence: `output/codex-ui-research/bettercodex-visual-fix-assertions.json`, `output/codex-ui-research/bettercodex-visual-fix-themes.json`, `output/codex-ui-research/bettercodex-visual-fix-enable.json`, and screenshots with the same prefix.
-- Starter plugins replaced the `Hello Codex` smoke addon. Local BetterCodex profile now has `Codex Workflow Kit` and `Codex Scratchpad` installed and enabled.
-- Starter-plugin CDP smoke passed in `/tmp/Codex-BetterCodex-Starters2.app`: Plugins page showed two installed cards (`Codex Scratchpad`, `Codex Workflow Kit`), no `Hello Codex`, no `Community plugins`, no `[data-install]`, and both plugin UI buttons (`Notes`, `Prompts`) were live.
-- Starter-plugin behavior passed: `Codex Workflow Kit` inserted a workflow prompt into the Codex ProseMirror composer; `Codex Scratchpad` saved through `BdApi.Data` and inserted scratchpad text into the composer. Screenshot evidence: `output/codex-ui-research/bettercodex-starter-plugins-final.png`.
+- Starter desktop plugins were removed after review. Local BetterCodex profile has zero installed plugins; the Plugins page should render the empty installed state until the user adds their own `.plugin.js` file.
+- Plugin reload now stops running plugin instances whose files have been removed from the local plugin folder, so deleting a plugin file actually removes its live UI after the installed list refreshes.
+- BetterCodex no longer closes on Codex host history changes; right-side panel open/close should keep BetterCodex mounted like the native Plugins page. Leaving BetterCodex is handled by actual left-sidebar route clicks.
+- No-plugin/right-sidebar CDP smoke passed in `/tmp/Codex-BetterCodex-NoPlugins.app`: Plugins showed `0 installed` and the empty plugin state; toggling the native right side panel open and closed left BetterCodex mounted on the Plugins page. Screenshot evidence: `output/codex-ui-research/bettercodex-no-plugins-right-sidebar.png`.
 - Hosted API responded with schema version `1` and addons from the `companion-inc/bettercodex-plugins` registry.
-- Community registry `companion-inc/bettercodex-plugins` includes starter Codex workflow skills; starter desktop plugin code is mirrored from `packages/addons/examples/plugins`.
-- Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded a local plugin from the plugins folder, started immediately, rendered plugin UI, persisted data through `BdApi.Data`, then loaded local `Focus Contrast` from `themes/focus-contrast.theme.css`, applied `--bettercodex-focus-ring`, and refreshed the installed themes section immediately.
+- Community registry `companion-inc/bettercodex-plugins` includes starter Codex workflow skills and the `Focus Contrast` theme; it has zero desktop plugin packages.
+- Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded local add-ons from the installed folders, applied theme CSS through `BdApi.DOM`, and refreshed installed sections immediately.
 - E2E evidence: `output/codex-ui-research/bettercodex-e2e-report.json` and `output/codex-ui-research/bettercodex-e2e-installed-theme.png`.
 - BetterDiscord reference re-check used upstream commit `943944b`: current source still uses the injector/preload/renderer split, local plugin/theme folders, `BdApi` Addon/Data APIs, addon-store download-to-folder flow, and plugin/theme start/stop managers.
 - Official `/Applications/Codex.app` on disk is patched: loader `yes`, ASAR integrity `yes`, codesign `yes`.

@@ -18,11 +18,11 @@ test("Worker validates submissions without GitHub token", async () => {
     headers: {"content-type": "application/json"},
     body: JSON.stringify({
       author: "Companion",
-      description: "Adds one-click Codex workflow prompts.",
-      downloadUrl: "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/plugins/codex-workflow-kit.plugin.js",
-      fileName: "codex-workflow-kit.plugin.js",
-      name: "Codex Workflow Kit",
-      type: "plugin",
+      description: "Improves focus rings and active control contrast.",
+      downloadUrl: "https://raw.githubusercontent.com/companion-inc/bettercodex/main/packages/addons/examples/themes/focus-contrast.theme.css",
+      fileName: "focus-contrast.theme.css",
+      name: "Focus Contrast",
+      type: "theme",
       version: "0.1.0",
     }),
   }), {});
