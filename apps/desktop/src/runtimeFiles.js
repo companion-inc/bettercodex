@@ -573,9 +573,10 @@ function rendererRuntimeSource() {
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (target.closest("[data-bettercodex-nav='true']") || target.closest(".bettercodex-panel")) return;
-      const button = target.closest("button, a");
-      if (!button) return;
-      if (!/h-\[var\(--height-token-row\)\]/.test(button.className || "")) return;
+      const routeTarget = target.closest("button, a, [role='button'], [role='link'], [tabindex]");
+      if (!routeTarget) return;
+      const navigation = target.closest("nav, [role='navigation']");
+      if (!navigation) return;
       closePanel();
     }, true);
   }

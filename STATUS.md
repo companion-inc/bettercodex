@@ -44,6 +44,8 @@ codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-InstalledOn
 agent-browser CDP installed-only smoke against /tmp/Codex-BetterCodex-InstalledOnly.app on port 9244
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex No Plugins" --destination /tmp/Codex-BetterCodex-NoPlugins.app --home /tmp/bettercodex-no-plugins-home --replace
 agent-browser CDP no-plugin/right-sidebar smoke against /tmp/Codex-BetterCodex-NoPlugins.app on port 9252
+node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex Nav Close 2" --destination /tmp/Codex-BetterCodex-NavClose2.app --home /tmp/bettercodex-nav-close2-home --replace
+agent-browser CDP right-sidebar/chat-navigation smoke against /tmp/Codex-BetterCodex-NavClose2.app on port 9254
 ```
 
 Results:
@@ -65,7 +67,9 @@ Results:
 - Starter desktop plugins were removed after review. Local BetterCodex profile has zero installed plugins; the Plugins page should render the empty installed state until the user adds their own `.plugin.js` file.
 - Plugin reload now stops running plugin instances whose files have been removed from the local plugin folder, so deleting a plugin file actually removes its live UI after the installed list refreshes.
 - BetterCodex no longer closes on Codex host history changes; right-side panel open/close should keep BetterCodex mounted like the native Plugins page. Leaving BetterCodex is handled by actual left-sidebar route clicks.
+- Left-sidebar chat/thread navigation now closes BetterCodex; native right-side panel toggles still keep BetterCodex mounted.
 - No-plugin/right-sidebar CDP smoke passed in `/tmp/Codex-BetterCodex-NoPlugins.app`: Plugins showed `0 installed` and the empty plugin state; toggling the native right side panel open and closed left BetterCodex mounted on the Plugins page. Screenshot evidence: `output/codex-ui-research/bettercodex-no-plugins-right-sidebar.png`.
+- Right-sidebar/chat-navigation CDP smoke passed in `/tmp/Codex-BetterCodex-NavClose2.app`: BetterCodex opened with `0 installed`, toggling the native `Toggle side panel` button left BetterCodex mounted, and clicking the left-sidebar chat row `Automate PR creation for companion` closed BetterCodex and cleared its active sidebar state.
 - Hosted API responded with schema version `1` and addons from the `companion-inc/bettercodex-plugins` registry.
 - Community registry `companion-inc/bettercodex-plugins` includes starter Codex workflow skills and the `Focus Contrast` theme; it has zero desktop plugin packages.
 - Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded local add-ons from the installed folders, applied theme CSS through `BdApi.DOM`, and refreshed installed sections immediately.

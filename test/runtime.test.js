@@ -29,6 +29,9 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("bettercodex-switch"), true);
   assert.equal(renderer.includes("pushState"), false);
   assert.equal(renderer.includes("replaceState"), false);
+  assert.equal(renderer.includes("closest(\"nav, [role='navigation']\")"), true);
+  assert.equal(renderer.includes("clientX <= leftBoundary"), false);
+  assert.equal(renderer.includes("test(button.className"), false);
 
   const config = JSON.parse(fs.readFileSync(runtime.configPath, "utf8"));
   assert.equal(config.catalogEndpoint, "https://catalog.example.test/api/addons");
