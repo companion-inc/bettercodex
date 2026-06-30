@@ -42,6 +42,9 @@ function createBundle(options = {}) {
   setPlist(infoPlist, "CFBundleDisplayName", name);
   setPlist(infoPlist, "CFBundleName", name);
   setPlist(infoPlist, "CFBundleIdentifier", `com.openai.codex.${slug}`);
+  if (installBetterCodexIcon(destination)) {
+    setPlist(infoPlist, "CFBundleIconFile", "bettercodex.icns");
+  }
   installLauncherWrapper(destination, name);
   signAndVerify(destination);
 
@@ -134,6 +137,97 @@ function installLauncherWrapper(destination, userDataName) {
   );
 }
 
+function installBetterCodexIcon(destination) {
+  const resourcesDir = path.join(destination, "Contents", "Resources");
+  const source = [
+    path.join(resourcesDir, "icon-codex-dark-color.png"),
+    path.join(resourcesDir, "icon.png"),
+    path.join(resourcesDir, "default_app", "icon.png"),
+  ].find((candidate) => fs.existsSync(candidate));
+  if (!source) return false;
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bettercodex-icon-"));
+  const iconset = path.join(tempDir, "bettercodex.iconset");
+  const iconPath = path.join(resourcesDir, "bettercodex.icns");
+  try {
+    fs.mkdirSync(iconset);
+    childProcess.execFileSync("python3", ["-c", betterCodexIconPython(), source, iconset], {
+      stdio: "inherit",
+    });
+    childProcess.execFileSync("/usr/bin/iconutil", ["-c", "icns", iconset, "-o", iconPath], {
+      stdio: "inherit",
+    });
+    return fs.existsSync(iconPath);
+  } catch (error) {
+    console.warn(`BetterCodex icon generation skipped: ${error.message}`);
+    return false;
+  } finally {
+    fs.rmSync(tempDir, {force: true, recursive: true});
+  }
+}
+
+function betterCodexIconPython() {
+  return String.raw`
+import os
+import sys
+from PIL import Image, ImageDraw, ImageFilter
+
+source, iconset = sys.argv[1], sys.argv[2]
+base = Image.open(source).convert("RGBA")
+
+def rounded(draw, box, radius, fill, outline=None, width=1):
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
+
+def compose(size):
+    icon = base.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow)
+    badge = (
+        int(size * 0.55),
+        int(size * 0.57),
+        int(size * 0.94),
+        int(size * 0.94),
+    )
+    radius = max(3, int(size * 0.095))
+    rounded(sd, badge, radius, (0, 0, 0, 150))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(max(1, size // 48)))
+    icon.alpha_composite(shadow)
+
+    draw = ImageDraw.Draw(icon)
+    rounded(draw, badge, radius, (20, 198, 170, 248), (244, 255, 252, 235), max(1, size // 56))
+
+    pad = max(2, int(size * 0.075))
+    gap = max(1, int(size * 0.025))
+    left = badge[0] + pad
+    top = badge[1] + pad
+    tile = max(2, int((badge[2] - badge[0] - (2 * pad) - gap) / 2))
+    tile_radius = max(1, int(tile * 0.28))
+    tile_fill = (5, 21, 25, 230)
+    for row in range(2):
+        for col in range(2):
+            x = left + col * (tile + gap)
+            y = top + row * (tile + gap)
+            rounded(draw, (x, y, x + tile, y + tile), tile_radius, tile_fill)
+    return icon
+
+outputs = [
+    ("icon_16x16.png", 16),
+    ("icon_16x16@2x.png", 32),
+    ("icon_32x32.png", 32),
+    ("icon_32x32@2x.png", 64),
+    ("icon_128x128.png", 128),
+    ("icon_128x128@2x.png", 256),
+    ("icon_256x256.png", 256),
+    ("icon_256x256@2x.png", 512),
+    ("icon_512x512.png", 512),
+    ("icon_512x512@2x.png", 1024),
+]
+
+for filename, size in outputs:
+    compose(size).save(os.path.join(iconset, filename))
+`;
+}
+
 function signAndVerify(destination) {
   childProcess.spawnSync("/usr/bin/xattr", ["-dr", "com.apple.quarantine", destination], {
     stdio: "ignore",
@@ -149,6 +243,7 @@ function signAndVerify(destination) {
 }
 
 module.exports = {
+  betterCodexIconPython,
   createBundle,
   defaultDestination,
   normalizeName,
