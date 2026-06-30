@@ -94,3 +94,4 @@ Results:
 - `/Applications/BetterCodex.app` status passed: loader `yes`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
 - Installed BetterCodex CDP smoke passed on port `9266`: process path is `/Applications/BetterCodex.app/Contents/MacOS/Codex-bin`, user data is `Application Support/BetterCodex`, `window.BetterCodex` and `window.BdApi` exist, BetterCodex opens under `MAIN` with only `Plugins` and `Themes`, the no-plugin empty state renders, right-side panel toggles keep BetterCodex mounted, and native Plugins navigation closes BetterCodex.
 - Current local checks passed after the installed-app rename: `npm test` (22 tests), `npm run check`, and `git diff --check`.
+- Commit `09da24d` was pushed to `companion-inc/bettercodex` `main`, and GitHub Actions run `28417317492` passed.

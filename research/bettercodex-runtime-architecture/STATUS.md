@@ -1,6 +1,6 @@
 # Status
 
-Confidence: 99/100 after local app rebuild, CDP smoke, tests, and checks. Remaining confidence gap is push and CI.
+Confidence: 100/100 for the selected architecture and shipped rename: source research, local app rebuild, CDP smoke, tests, push, and CI are complete.
 
 Objective:
 Make BetterCodex a BetterDiscord-style community plugin/theme layer for Codex while preserving Codex Desktop updates. The runtime must install as `/Applications/BetterCodex.app`, not `Codex-BetterCodex.app`, and the official `/Applications/Codex.app` must stay vendor-signed and unmodified.
@@ -13,10 +13,10 @@ Known facts:
 - Old generated `/Applications/Codex-BetterCodex.app` exists and works, but the requested installed app name is `/Applications/BetterCodex.app`.
 
 Open questions:
-- None on architecture. Remaining work is push and CI.
+- None.
 
 Next action:
-- Stage, commit, push, and watch GitHub checks.
+- Future Codex upgrades should rebuild `/Applications/BetterCodex.app` from the latest clean `/Applications/Codex.app` and rerun the CDP smoke.
 
 Verification log:
 - BetterDiscord source cloned at commit `943944b7431ed4acccf528454666233f1084537c`.
@@ -34,6 +34,8 @@ Verification log:
 - `npm test` passed: 22 tests.
 - `npm run check` passed: syntax/runtime file check and web typecheck.
 - `git diff --check` passed.
+- Commit `09da24d` pushed to `companion-inc/bettercodex` `main`.
+- GitHub Actions run `28417317492` passed.
 
 Mutation log:
 - Changed `apps/desktop/src/bundler.js` default destination/profile naming to `BetterCodex.app` and `Application Support/BetterCodex`.

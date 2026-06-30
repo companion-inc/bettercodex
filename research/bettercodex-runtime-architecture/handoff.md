@@ -8,7 +8,7 @@ Read first:
 - `apps/desktop/src/runtimeFiles.js`
 
 Confidence:
-99/100 after local app rebuild, smoke, tests, and checks. Architecture decision and local runtime behavior are settled; push and CI remain.
+100/100 for the selected architecture and shipped rename. Source research, local app rebuild, smoke, tests, push, and CI are complete.
 
 Done:
 - Read BetterDiscord source for installer, preload, plugin manager, and theme manager.
@@ -21,9 +21,11 @@ Done:
 - Verified official Codex stayed clean after install.
 - Verified BetterCodex loader, profile, and installed-app CDP behavior.
 - `npm test`, `npm run check`, and `git diff --check` passed.
+- Commit `09da24d` pushed to `companion-inc/bettercodex` `main`.
+- GitHub Actions run `28417317492` passed.
 
 Not done:
-- Commit/push/watch CI.
+- None for this slice.
 
 Do next:
 1. Run `npm run desktop -- install --launch=false`.

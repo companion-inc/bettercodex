@@ -7,4 +7,4 @@
 | Old `Codex-BetterCodex.app` name is gone from user-facing install path | `rg -n "Codex-BetterCodex" README.md AGENTS.md apps test` | Finder/app path check | Active docs/help/code use `BetterCodex.app`; stale generated app removed | Passed | Historical notes may mention old name as obsolete evidence |
 | BetterCodex UI stays mounted on right-panel toggle | CDP DOM check against running BetterCodex | Click right side panel button | BetterCodex remains open/active; no toolbar overlap | Passed on installed app | Re-run after future Codex upgrades |
 | Tests pass | `npm test`; `npm run check`; `git diff --check` | None | 22 tests passed; check passed; diff check passed | Passed | None |
-| Push is durable | `git status`, `git commit`, `git push`, `gh run list/watch` | GitHub checks | Commit hash and push result | Pending | Run last |
+| Push is durable | `git status`, `git commit`, `git push`, `gh run list/watch` | GitHub checks | Commit `09da24d` pushed; GitHub Actions run `28417317492` passed | Passed | None |
