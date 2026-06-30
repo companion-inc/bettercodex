@@ -180,24 +180,28 @@ def rounded(draw, box, radius, fill, outline=None, width=1):
 
 def compose(size):
     icon = base.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
+    tint = Image.new("RGBA", (size, size), (20, 198, 170, 0))
+    mask = icon.getchannel("A").point(lambda value: int(value * 0.34))
+    tint.putalpha(mask)
+    icon = Image.alpha_composite(icon, tint)
     shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     sd = ImageDraw.Draw(shadow)
     badge = (
-        int(size * 0.55),
-        int(size * 0.57),
-        int(size * 0.94),
-        int(size * 0.94),
+        int(size * 0.47),
+        int(size * 0.49),
+        int(size * 0.96),
+        int(size * 0.96),
     )
-    radius = max(3, int(size * 0.095))
+    radius = max(3, int(size * 0.12))
     rounded(sd, badge, radius, (0, 0, 0, 150))
     shadow = shadow.filter(ImageFilter.GaussianBlur(max(1, size // 48)))
     icon.alpha_composite(shadow)
 
     draw = ImageDraw.Draw(icon)
-    rounded(draw, badge, radius, (20, 198, 170, 248), (244, 255, 252, 235), max(1, size // 56))
+    rounded(draw, badge, radius, (20, 198, 170, 255), (244, 255, 252, 245), max(1, size // 42))
 
-    pad = max(2, int(size * 0.075))
-    gap = max(1, int(size * 0.025))
+    pad = max(2, int(size * 0.09))
+    gap = max(1, int(size * 0.032))
     left = badge[0] + pad
     top = badge[1] + pad
     tile = max(2, int((badge[2] - badge[0] - (2 * pad) - gap) / 2))
