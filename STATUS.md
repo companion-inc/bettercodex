@@ -35,7 +35,7 @@ codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-RuntimeSmok
 CDP screenshot/browser assertions against /tmp/Codex-BetterCodex-RuntimeSmoke.app
 node apps/desktop/bin/bettercodex.js install --launch=false
 node apps/desktop/bin/bettercodex.js status
-node apps/desktop/bin/bettercodex.js status --app /Applications/Codex-BetterCodex.app
+node apps/desktop/bin/bettercodex.js status --app /Applications/BetterCodex.app
 curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex E2E" --destination /tmp/Codex-BetterCodex-E2E.app --home /tmp/bettercodex-e2e-home --replace
 codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-E2E.app
@@ -71,7 +71,7 @@ Results:
 - Visual-fix evidence: `output/codex-ui-research/bettercodex-visual-fix-assertions.json`, `output/codex-ui-research/bettercodex-visual-fix-themes.json`, `output/codex-ui-research/bettercodex-visual-fix-enable.json`, and screenshots with the same prefix.
 - Starter desktop plugins were removed after review. Local BetterCodex profile has zero installed plugins; the Plugins page should render the empty installed state until the user adds their own `.plugin.js` file.
 - Plugin reload now stops running plugin instances whose files have been removed from the local plugin folder, so deleting a plugin file actually removes its live UI after the installed list refreshes.
-- Update survival is handled by not mutating `/Applications/Codex.app` in normal installs. `npm run desktop -- install` creates or refreshes `/Applications/Codex-BetterCodex.app`; direct official-app patching is gated behind `--unsafe-patch-official-app`.
+- Update survival is handled by not mutating `/Applications/Codex.app` in normal installs. `npm run desktop -- install` creates or refreshes `/Applications/BetterCodex.app`; direct official-app patching is gated behind `--unsafe-patch-official-app`.
 - BetterCodex no longer closes on Codex host history changes; right-side panel open/close should keep BetterCodex mounted like the native Plugins page. Leaving BetterCodex is handled by actual left-sidebar route clicks.
 - Left-sidebar chat/thread navigation now closes BetterCodex; native right-side panel toggles still keep BetterCodex mounted.
 - No-plugin/right-sidebar CDP smoke passed in `/tmp/Codex-BetterCodex-NoPlugins.app`: Plugins showed `0 installed` and the empty plugin state; toggling the native right side panel open and closed left BetterCodex mounted on the Plugins page. Screenshot evidence: `output/codex-ui-research/bettercodex-no-plugins-right-sidebar.png`.
@@ -87,5 +87,10 @@ Results:
 - BetterDiscord reference re-check used upstream commit `943944b`: current source still uses the injector/preload/renderer split, local plugin/theme folders, `BdApi` Addon/Data APIs, addon-store download-to-folder flow, and plugin/theme start/stop managers.
 - Official `/Applications/Codex.app` was restored from the official OpenAI DMG after updater failure from ad-hoc signing: version `26.623.70822`, build `4559`, TeamIdentifier `2DC432GLL2`, loader `no`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
 - The old ad-hoc patched official app bundle is preserved at `/Applications/Codex.app.bettercodex-adhoc-20260629184211`.
-- `/Applications/Codex-BetterCodex.app` is installed as the BetterCodex runtime: version `26.623.70822`, build `4559`, bundle id `com.openai.codex.bettercodex`, loader `yes`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
+- `/Applications/BetterCodex.app` is the intended BetterCodex runtime path. The previous generated `/Applications/Codex-BetterCodex.app` name is obsolete.
 - Installed BetterCodex sibling-app CDP smoke passed on port `9264`: BetterCodex nav item exists, the panel opens under `MAIN`, native host children are hidden with zero visible hidden nodes, and the native `Plugins Skills` toolbar does not bleed through.
+- Installed app rename verification passed: `npm run desktop -- install --launch=false` created `/Applications/BetterCodex.app` with bundle id `com.openai.codex.bettercodex` and user data `/Users/advaitpaliwal/Library/Application Support/BetterCodex`; the stale generated `/Applications/Codex-BetterCodex.app` sibling was removed.
+- Official `/Applications/Codex.app` remained clean after the BetterCodex install: loader `no`, repair agent `no`, ASAR integrity `yes`, codesign `yes`, TeamIdentifier `2DC432GLL2`.
+- `/Applications/BetterCodex.app` status passed: loader `yes`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
+- Installed BetterCodex CDP smoke passed on port `9266`: process path is `/Applications/BetterCodex.app/Contents/MacOS/Codex-bin`, user data is `Application Support/BetterCodex`, `window.BetterCodex` and `window.BdApi` exist, BetterCodex opens under `MAIN` with only `Plugins` and `Themes`, the no-plugin empty state renders, right-side panel toggles keep BetterCodex mounted, and native Plugins navigation closes BetterCodex.
+- Current local checks passed after the installed-app rename: `npm test` (22 tests), `npm run check`, and `git diff --check`.

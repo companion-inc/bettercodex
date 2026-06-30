@@ -1,0 +1,14 @@
+# Source Inventory
+
+| Source | Category | Evidence | Why it matters | Trust | Status |
+| --- | --- | --- | --- | --- | --- |
+| `research/.../source-archive/BetterDiscord/scripts/inject.ts` | Reference source | Finds Discord install/version dir, writes `index.js` into `discord_desktop_core`, requires BetterDiscord before `core.asar`. | BetterDiscord mutates the installed app bootstrap. This is a product reference, not the safe Codex install mechanism. | Primary cloned source | Read |
+| `research/.../source-archive/BetterDiscord/src/electron/preload/index.ts` | Reference source | Exposes process, preload bridge, and renderer invocation through Electron context bridge. | Shows BetterDiscord's injection boundary between Electron preload and renderer. | Primary cloned source | Read |
+| `research/.../source-archive/BetterDiscord/src/electron/preload/early/index.ts` | Reference source | Proxies webpack chunk/module runtime. | Shows BetterDiscord relies on Discord-specific webpack internals. Codex should not copy this blindly. | Primary cloned source | Read |
+| `research/.../source-archive/BetterDiscord/src/betterdiscord/modules/pluginmanager.ts` | Reference source | `.plugin.js` extension, local plugin folder, start/stop lifecycle. | Defines the plugin expectations BetterCodex should mirror. | Primary cloned source | Read |
+| `research/.../source-archive/BetterDiscord/src/betterdiscord/modules/thememanager.ts` | Reference source | `.theme.css` extension, local theme folder, CSS injection/removal. | Defines the theme expectations BetterCodex should mirror. | Primary cloned source | Read |
+| `research/.../source-archive/zats-skills/codex-app-modifier/SKILL.md` | Reference skill | Says never modify original Codex app, create a sibling app, verify packed ASAR, wrapper with `--user-data-dir`, launch and inspect process. | This is the correct Codex update-survival mechanism. | Primary cloned source | Read |
+| `apps/desktop/src/bundler.js` | Local code | Creates sibling app, installs loader, rewrites plist, installs launch wrapper, signs/verifies bundle. | Owns `/Applications/BetterCodex.app` creation and profile path. | Local source | Edited |
+| `apps/desktop/src/runtimeFiles.js` | Local code | Mounts BetterCodex under Codex `MAIN`, provides Plugins/Themes UI, local addon APIs. | Owns the in-Codex page behavior the user complained about. | Local source | Previously verified |
+| `apps/web/src/App.tsx` and `apps/api/worker.mjs` | Local code | Hosted shadcn/Vite web and Cloudflare API marketplace. | Owns public distribution surface; users do not host this themselves. | Local source | Read |
+| `/Applications/Codex.app` status/codesign | Local runtime | Build `4559`, TeamIdentifier `2DC432GLL2`, loader `no`, integrity/signature `yes`. | Proves the official app is restored and updater-safe before rebuilding BetterCodex. | Local command output | Verified |

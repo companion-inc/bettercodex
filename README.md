@@ -27,7 +27,7 @@ npm run desktop:status
 npm run desktop -- install
 ```
 
-The desktop installer creates or refreshes `/Applications/Codex-BetterCodex.app` instead of mutating `/Applications/Codex.app`. Keeping the official Codex app vendor-signed preserves its built-in updater. Add-ons and runtime files stay outside the app bundle under `~/.codex/bettercodex`.
+The desktop installer creates or refreshes `/Applications/BetterCodex.app` instead of mutating `/Applications/Codex.app`. Keeping the official Codex app vendor-signed preserves its built-in updater. Add-ons and runtime files stay outside the app bundle under `~/.codex/bettercodex`.
 
 Directly patching `/Applications/Codex.app` is reserved for local experiments:
 

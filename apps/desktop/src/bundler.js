@@ -15,7 +15,7 @@ function createBundle(options = {}) {
   const slug = slugify(name);
   const destination = options.destination
     ? path.resolve(options.destination)
-    : path.join(path.dirname(appRoot), `Codex-${name}.app`);
+    : defaultDestination(appRoot, name);
 
   if (!fs.existsSync(appRoot)) {
     throw new Error(`Codex app not found: ${appRoot}`);
@@ -42,7 +42,7 @@ function createBundle(options = {}) {
   setPlist(infoPlist, "CFBundleDisplayName", name);
   setPlist(infoPlist, "CFBundleName", name);
   setPlist(infoPlist, "CFBundleIdentifier", `com.openai.codex.${slug}`);
-  installLauncherWrapper(destination, `Codex ${name}`);
+  installLauncherWrapper(destination, name);
   signAndVerify(destination);
 
   if (options.launch) {
@@ -53,8 +53,16 @@ function createBundle(options = {}) {
     bundleId: `com.openai.codex.${slug}`,
     destination,
     installResult: result,
-    userDataDir: path.join(os.homedir(), "Library", "Application Support", `Codex ${name}`),
+    userDataDir: userDataDir(name),
   };
+}
+
+function defaultDestination(appRoot, name) {
+  return path.join(path.dirname(appRoot), `${normalizeName(name)}.app`);
+}
+
+function userDataDir(name) {
+  return path.join(os.homedir(), "Library", "Application Support", normalizeName(name));
 }
 
 function normalizeName(name) {
@@ -142,6 +150,8 @@ function signAndVerify(destination) {
 
 module.exports = {
   createBundle,
+  defaultDestination,
   normalizeName,
   slugify,
+  userDataDir,
 };

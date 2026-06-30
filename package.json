@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "check": "node scripts/check.mjs && npm --workspace @bettercodex/web run typecheck",
-    "test": "node --test",
+    "test": "node --test test/*.test.js test/*.test.mjs",
     "desktop": "node apps/desktop/bin/bettercodex.js",
     "desktop:status": "node apps/desktop/bin/bettercodex.js status",
     "web:build": "npm --workspace @bettercodex/web run build",

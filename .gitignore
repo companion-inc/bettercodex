@@ -8,3 +8,5 @@ output/
 *.tsbuildinfo
 *.log
 .DS_Store
+research/**/source-archive/*
+!research/**/source-archive/README.md

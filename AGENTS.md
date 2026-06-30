@@ -4,7 +4,7 @@
 
 - For any BetterCodex UI or Codex-host integration work, start from the installed Codex Desktop app: unpack `/Applications/Codex.app/Contents/Resources/app.asar` for shipped strings/code, and use a separate CDP-connected Codex instance to capture DOM roles, classes, computed styles, spacing, and interaction behavior before editing the matching surface.
 - Derive selectors, layout, copy, and interaction boundaries from those source measurements, then record the evidence in `STATUS.md` when shipping the change.
-- Treat `/Applications/Codex.app` as the vendor-signed source app. Read or restore it for evidence, then ship BetterCodex mutations through `npm run desktop -- install` or `npm run desktop -- bundle` so the changed runtime lives in `/Applications/Codex-BetterCodex.app` or a disposable sibling bundle.
+- Treat `/Applications/Codex.app` as the vendor-signed source app. Read or restore it for evidence, then ship BetterCodex mutations through `npm run desktop -- install` or `npm run desktop -- bundle` so the changed runtime lives in `/Applications/BetterCodex.app` or a disposable sibling bundle.
 - Patch the official Codex bundle only for an explicitly requested local experiment using `--unsafe-patch-official-app`, and report that this breaks the vendor signature/update path.
 
 ## Product Vocabulary

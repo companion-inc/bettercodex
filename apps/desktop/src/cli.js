@@ -239,9 +239,9 @@ function printHelp() {
 
 Commands:
   status              Inspect the local Codex Desktop app.
-  install             Create or refresh /Applications/Codex-BetterCodex.app.
+  install             Create or refresh /Applications/BetterCodex.app.
   repair              No-op by default; official Codex.app is not mutated.
-  bundle              Create a sibling Codex-BetterCodex.app bundle for dev/safety.
+  bundle              Create a sibling BetterCodex.app bundle for dev/safety.
   uninstall           Remove the BetterCodex background repair agent.
   paths               Print app, data, plugin, theme, and marketplace paths.
 
