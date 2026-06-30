@@ -156,6 +156,17 @@ function install(options = {}) {
 function uninstall(options = {}) {
   const appRoot = options.appRoot || defaultAppRoot;
   const installRoot = options.installRoot || defaultInstallRoot;
+  if (options.removeOnly) {
+    const wasInstalled = inspectRepairAgent().installed;
+    const repairAgent = removeRepairAgent();
+    return {
+      changed: wasInstalled,
+      message: wasInstalled
+        ? "BetterCodex repair agent removed."
+        : "BetterCodex repair agent is not installed.",
+      repairAgent,
+    };
+  }
   const paths = resolveAppPaths(appRoot);
   assertCodexApp(paths);
 

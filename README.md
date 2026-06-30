@@ -5,7 +5,7 @@ BetterCodex adds community plugins and themes to Codex Desktop.
 This repo is a monorepo with separate runtimes:
 
 ```text
-apps/desktop        Codex patcher, runtime injection, local plugin/theme loader, in-Codex Plugins/Themes UI
+apps/desktop        sibling BetterCodex app bundler, runtime injection, local plugin/theme loader, in-Codex Plugins/Themes UI
 apps/web            Hosted public marketplace website, built with Vite, React, and shadcn/ui
 apps/api            Hosted marketplace API for catalog, submissions, and downloads
 packages/catalog    Shared catalog schema and validation
@@ -27,7 +27,15 @@ npm run desktop:status
 npm run desktop -- install
 ```
 
-The desktop installer keeps add-ons and runtime files outside the app bundle under `~/.codex/bettercodex`. It also installs a per-user macOS LaunchAgent that runs a local repair check on login, every 120 seconds, and when Codex's `app.asar` or `Info.plist` changes. That repair path reapplies the small BetterCodex loader after Codex Desktop updates replace the app bundle.
+The desktop installer creates or refreshes `/Applications/Codex-BetterCodex.app` instead of mutating `/Applications/Codex.app`. Keeping the official Codex app vendor-signed preserves its built-in updater. Add-ons and runtime files stay outside the app bundle under `~/.codex/bettercodex`.
+
+Directly patching `/Applications/Codex.app` is reserved for local experiments:
+
+```bash
+npm run desktop -- install --unsafe-patch-official-app
+```
+
+That mode rewrites `app.asar`, re-signs the app ad hoc, and can break the official updater.
 
 Desktop addons live in:
 

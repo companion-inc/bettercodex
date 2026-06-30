@@ -5,12 +5,13 @@ const assert = require("node:assert/strict");
 
 const {parseArgs} = require("../apps/desktop/src/cli");
 
-test("parseArgs keeps install restart-on by default", () => {
+test("parseArgs keeps install sibling-safe by default", () => {
   const parsed = parseArgs(["install", "--app", "/Applications/Codex.app"]);
   assert.equal(parsed.command, "install");
   assert.equal(parsed.options.app, "/Applications/Codex.app");
   assert.equal(parsed.options.restart, true);
   assert.equal(parsed.options.repairAgent, true);
+  assert.equal(parsed.options.unsafePatchOfficialApp, false);
 });
 
 test("parseArgs supports no-restart and custom marketplace API", () => {
@@ -34,6 +35,13 @@ test("parseArgs supports repair without restart by default", () => {
   assert.equal(parsed.command, "repair");
   assert.equal(parsed.options.restartRepair, false);
   assert.equal(parsed.options.repairAgent, true);
+  assert.equal(parsed.options.unsafePatchOfficialApp, false);
+});
+
+test("parseArgs requires an explicit unsafe flag for official app patching", () => {
+  const parsed = parseArgs(["install", "--unsafe-patch-official-app"]);
+  assert.equal(parsed.command, "install");
+  assert.equal(parsed.options.unsafePatchOfficialApp, true);
 });
 
 test("parseArgs supports sibling bundle options", () => {
@@ -52,4 +60,10 @@ test("parseArgs supports sibling bundle options", () => {
   assert.equal(parsed.options.destination, "/Applications/Codex-Research.app");
   assert.equal(parsed.options.replace, true);
   assert.equal(parsed.options.launch, true);
+});
+
+test("parseArgs supports explicit boolean bundle flags", () => {
+  const parsed = parseArgs(["install", "--launch=false", "--replace=true"]);
+  assert.equal(parsed.options.launch, false);
+  assert.equal(parsed.options.replace, true);
 });

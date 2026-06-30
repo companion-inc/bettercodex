@@ -4,7 +4,7 @@
 
 BetterCodex is organized as a single repo with separate runtimes.
 
-- `apps/desktop`: user-installed Codex patcher and in-Codex Plugins/Themes UI using Codex token styling.
+- `apps/desktop`: update-safe sibling BetterCodex app bundler and in-Codex Plugins/Themes UI using Codex token styling.
 - `apps/web`: hosted public marketplace site built with Vite, React, and shadcn/ui.
 - `apps/api`: hosted marketplace API.
 - `packages/catalog`: shared schema and sample catalog.
@@ -33,9 +33,9 @@ npm run web:deploy
 node apps/desktop/bin/bettercodex.js bundle --name "Runtime Smoke" --destination /tmp/Codex-BetterCodex-RuntimeSmoke.app --replace
 codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-RuntimeSmoke.app
 CDP screenshot/browser assertions against /tmp/Codex-BetterCodex-RuntimeSmoke.app
-node apps/desktop/bin/bettercodex.js install --no-restart
+node apps/desktop/bin/bettercodex.js install --launch=false
 node apps/desktop/bin/bettercodex.js status
-node apps/desktop/bin/bettercodex.js repair
+node apps/desktop/bin/bettercodex.js status --app /Applications/Codex-BetterCodex.app
 curl -fsS https://bettercodex-web.companion-inc.workers.dev/api/addons
 node apps/desktop/bin/bettercodex.js bundle --name "BetterCodex E2E" --destination /tmp/Codex-BetterCodex-E2E.app --home /tmp/bettercodex-e2e-home --replace
 codesign --verify --deep --strict --verbose=2 /tmp/Codex-BetterCodex-E2E.app
@@ -56,7 +56,7 @@ agent-browser CDP page-surface open/close/right-sidebar smoke against /tmp/Codex
 Results:
 
 - Syntax and web typecheck passed.
-- Test suite passed: 18 tests.
+- Test suite passed: 20 tests.
 - npm audit passed: 0 vulnerabilities.
 - Codex-native skill pack validation passed.
 - Vite/React/shadcn web build passed and exported static assets to ignored `apps/web/out`.
@@ -71,7 +71,7 @@ Results:
 - Visual-fix evidence: `output/codex-ui-research/bettercodex-visual-fix-assertions.json`, `output/codex-ui-research/bettercodex-visual-fix-themes.json`, `output/codex-ui-research/bettercodex-visual-fix-enable.json`, and screenshots with the same prefix.
 - Starter desktop plugins were removed after review. Local BetterCodex profile has zero installed plugins; the Plugins page should render the empty installed state until the user adds their own `.plugin.js` file.
 - Plugin reload now stops running plugin instances whose files have been removed from the local plugin folder, so deleting a plugin file actually removes its live UI after the installed list refreshes.
-- Update survival is handled by a per-user macOS LaunchAgent at `~/Library/LaunchAgents/com.companion.bettercodex.repair.plist`; it runs the generated `~/.codex/bettercodex/runtime/repair.cjs` script on login, every 120 seconds, and when Codex's `app.asar` or `Info.plist` changes. The runtime, data, plugin, and theme folders stay outside `/Applications/Codex.app`.
+- Update survival is handled by not mutating `/Applications/Codex.app` in normal installs. `npm run desktop -- install` creates or refreshes `/Applications/Codex-BetterCodex.app`; direct official-app patching is gated behind `--unsafe-patch-official-app`.
 - BetterCodex no longer closes on Codex host history changes; right-side panel open/close should keep BetterCodex mounted like the native Plugins page. Leaving BetterCodex is handled by actual left-sidebar route clicks.
 - Left-sidebar chat/thread navigation now closes BetterCodex; native right-side panel toggles still keep BetterCodex mounted.
 - No-plugin/right-sidebar CDP smoke passed in `/tmp/Codex-BetterCodex-NoPlugins.app`: Plugins showed `0 installed` and the empty plugin state; toggling the native right side panel open and closed left BetterCodex mounted on the Plugins page. Screenshot evidence: `output/codex-ui-research/bettercodex-no-plugins-right-sidebar.png`.
@@ -85,7 +85,7 @@ Results:
 - Clean installed-flow E2E passed in `/tmp/Codex-BetterCodex-E2E.app` with fresh home `/tmp/bettercodex-e2e-home`: BetterCodex opened inside Codex, loaded local add-ons from the installed folders, applied theme CSS through `BdApi.DOM`, and refreshed installed sections immediately.
 - E2E evidence: `output/codex-ui-research/bettercodex-e2e-report.json` and `output/codex-ui-research/bettercodex-e2e-installed-theme.png`.
 - BetterDiscord reference re-check used upstream commit `943944b`: current source still uses the injector/preload/renderer split, local plugin/theme folders, `BdApi` Addon/Data APIs, addon-store download-to-folder flow, and plugin/theme start/stop managers.
-- Official `/Applications/Codex.app` on disk is patched: loader `yes`, ASAR integrity `yes`, codesign `yes`.
-- Official `/Applications/Codex.app` has the BetterCodex repair agent installed and loaded.
-- Official runtime config uses `catalogEndpoint: https://bettercodex-web.companion-inc.workers.dev/api/addons`.
-- Current running Codex instances need a restart to load the refreshed runtime.
+- Official `/Applications/Codex.app` was restored from the official OpenAI DMG after updater failure from ad-hoc signing: version `26.623.70822`, build `4559`, TeamIdentifier `2DC432GLL2`, loader `no`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
+- The old ad-hoc patched official app bundle is preserved at `/Applications/Codex.app.bettercodex-adhoc-20260629184211`.
+- `/Applications/Codex-BetterCodex.app` is installed as the BetterCodex runtime: version `26.623.70822`, build `4559`, bundle id `com.openai.codex.bettercodex`, loader `yes`, repair agent `no`, ASAR integrity `yes`, codesign `yes`.
+- Installed BetterCodex sibling-app CDP smoke passed on port `9264`: BetterCodex nav item exists, the panel opens under `MAIN`, native host children are hidden with zero visible hidden nodes, and the native `Plugins Skills` toolbar does not bleed through.

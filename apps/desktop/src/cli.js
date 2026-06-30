@@ -14,25 +14,45 @@ async function main(argv) {
       printStatus(inspect(options.app));
       return;
     case "install": {
-      const result = install({
+      if (options.unsafePatchOfficialApp) {
+        const result = install({
+          appRoot: options.app,
+          installRoot: options.home,
+          restart: options.restart,
+          catalogEndpoint: options.catalog,
+          repairAgent: options.repairAgent,
+        });
+        console.log(result.changed ? "BetterCodex installed into Codex.app." : result.message);
+        console.log(`Install root: ${result.installRoot || options.home}`);
+        console.log(`Catalog API: ${options.catalog}`);
+        if (result.repairAgent) {
+          console.log(`Repair agent: ${result.repairAgent.loaded ? "loaded" : result.repairAgent.installed ? "installed" : "not installed"}`);
+        }
+        if (result.backupDir) {
+          console.log(`Backup: ${result.backupDir}`);
+        }
+        return;
+      }
+      const result = createBundle({
         appRoot: options.app,
+        destination: options.destination,
         installRoot: options.home,
-        restart: options.restart,
+        launch: options.launch,
+        name: options.bundleName,
+        replace: true,
         catalogEndpoint: options.catalog,
-        repairAgent: options.repairAgent,
       });
-      console.log(result.changed ? "BetterCodex installed." : result.message);
-      console.log(`Install root: ${result.installRoot || options.home}`);
-      console.log(`Catalog API: ${options.catalog}`);
-      if (result.repairAgent) {
-        console.log(`Repair agent: ${result.repairAgent.loaded ? "loaded" : result.repairAgent.installed ? "installed" : "not installed"}`);
-      }
-      if (result.backupDir) {
-        console.log(`Backup: ${result.backupDir}`);
-      }
+      console.log(`BetterCodex app installed: ${result.destination}`);
+      console.log(`Bundle id: ${result.bundleId}`);
+      console.log(`User data: ${result.userDataDir}`);
       return;
     }
     case "repair": {
+      if (!options.unsafePatchOfficialApp) {
+        console.log("Repair skipped: BetterCodex no longer mutates the official Codex.app by default.");
+        console.log("Run `bettercodex install` to refresh the sibling BetterCodex app.");
+        return;
+      }
       const result = install({
         appRoot: options.app,
         installRoot: options.home,
@@ -63,6 +83,16 @@ async function main(argv) {
       return;
     }
     case "uninstall": {
+      if (!options.unsafePatchOfficialApp) {
+        const result = uninstall({
+          appRoot: options.app,
+          installRoot: options.home,
+          restart: false,
+          removeOnly: true,
+        });
+        console.log(result.message);
+        return;
+      }
       const result = uninstall({
         appRoot: options.app,
         installRoot: options.home,
@@ -97,6 +127,7 @@ function parseArgs(argv) {
     repairAgent: true,
     restart: true,
     restartRepair: false,
+    unsafePatchOfficialApp: false,
     catalog: defaultCatalogEndpoint,
   };
   let command = "help";
@@ -132,12 +163,12 @@ function parseArgs(argv) {
       i += 1;
       continue;
     }
-    if (arg === "--replace") {
-      options.replace = true;
+    if (arg === "--replace" || arg.startsWith("--replace=")) {
+      options.replace = readBooleanFlag(arg, "--replace", true);
       continue;
     }
-    if (arg === "--launch") {
-      options.launch = true;
+    if (arg === "--launch" || arg.startsWith("--launch=")) {
+      options.launch = readBooleanFlag(arg, "--launch", true);
       continue;
     }
     if (arg === "--restart") {
@@ -154,6 +185,10 @@ function parseArgs(argv) {
       options.repairAgent = false;
       continue;
     }
+    if (arg === "--unsafe-patch-official-app") {
+      options.unsafePatchOfficialApp = true;
+      continue;
+    }
     if (arg === "-h" || arg === "--help") {
       command = "help";
       continue;
@@ -162,6 +197,14 @@ function parseArgs(argv) {
   }
 
   return {command, options};
+}
+
+function readBooleanFlag(arg, flag, defaultValue) {
+  if (arg === flag) return defaultValue;
+  const value = arg.slice(flag.length + 1).toLowerCase();
+  if (value === "true" || value === "1" || value === "yes") return true;
+  if (value === "false" || value === "0" || value === "no") return false;
+  throw new Error(`Invalid boolean for ${flag}: ${value}`);
 }
 
 function requireValue(argv, index, flag) {
@@ -196,10 +239,10 @@ function printHelp() {
 
 Commands:
   status              Inspect the local Codex Desktop app.
-  install             Patch Codex Desktop and install the BetterCodex runtime.
-  repair              Re-check Codex Desktop and reinstall the loader after app updates.
+  install             Create or refresh /Applications/Codex-BetterCodex.app.
+  repair              No-op by default; official Codex.app is not mutated.
   bundle              Create a sibling Codex-BetterCodex.app bundle for dev/safety.
-  uninstall           Remove the BetterCodex loader from Codex Desktop.
+  uninstall           Remove the BetterCodex background repair agent.
   paths               Print app, data, plugin, theme, and marketplace paths.
 
 Options:
@@ -210,9 +253,12 @@ Options:
   --destination <app> Sibling app destination for bundle.
   --replace           Replace an existing destination bundle.
   --launch            Launch the sibling bundle after creating it.
-  --restart           Force restart Codex after install/uninstall. Default.
+  --restart           Force restart Codex after unsafe official-app patching. Default.
   --no-restart        Patch without restarting Codex.
   --no-repair-agent   Do not install the background updater-repair LaunchAgent.
+  --unsafe-patch-official-app
+                      Patch /Applications/Codex.app directly. This breaks the vendor
+                      signature and can break Sparkle updates; use only for local experiments.
 `);
 }
 
