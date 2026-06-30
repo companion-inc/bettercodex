@@ -20,7 +20,8 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   }
 
   const renderer = fs.readFileSync(runtime.rendererPath, "utf8");
-  assert.equal(renderer.includes("data-install"), false);
+  assert.equal(renderer.includes("data-install"), true);
+  assert.equal(renderer.includes('section("Marketplace"'), true);
   assert.equal(renderer.includes("Community plugins"), false);
   assert.equal(renderer.includes("Community themes"), false);
   assert.equal(renderer.includes("Open Plugin Folder"), true);
@@ -28,6 +29,7 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("<div class=\"bettercodex-file\">"), false);
   assert.equal(renderer.includes("bettercodex-status"), false);
   assert.equal(renderer.includes("bettercodex-switch"), true);
+  assert.equal(renderer.includes("bettercodex-market-card"), true);
   assert.equal(renderer.includes("suppressOtherNavActive"), true);
   assert.equal(renderer.includes("bettercodex-native-active-muted"), true);
   assert.equal(renderer.includes("syncHostContent"), true);
@@ -44,6 +46,9 @@ test("writeRuntimeFiles emits syntax-valid runtime files", () => {
   assert.equal(renderer.includes("closest(\"nav, [role='navigation']\")"), true);
   assert.equal(renderer.includes("clientX <= leftBoundary"), false);
   assert.equal(renderer.includes("test(button.className"), false);
+
+  const main = fs.readFileSync(runtime.loaderPath, "utf8");
+  assert.equal(main.includes("Only plugins and themes install into the desktop client"), true);
 
   const config = JSON.parse(fs.readFileSync(runtime.configPath, "utf8"));
   assert.equal(config.catalogEndpoint, "https://catalog.example.test/api/addons");

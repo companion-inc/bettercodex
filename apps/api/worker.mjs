@@ -11,10 +11,14 @@ async function fetchCommunityCatalog() {
     if (!response.ok) return [];
     const data = await response.json();
     const addons = Array.isArray(data) ? data : data.addons;
-    return Array.isArray(addons) ? addons : [];
+    return Array.isArray(addons) ? addons.filter(isRuntimeAddon) : [];
   } catch (error) {
     return [];
   }
+}
+
+function isRuntimeAddon(addon) {
+  return addon && (addon.type === "plugin" || addon.type === "theme");
 }
 
 const jsonHeaders = {
@@ -102,7 +106,7 @@ async function handleSubmission(request, env) {
 }
 
 async function createSubmissionIssue(env, submission) {
-  const repo = env.GITHUB_REPO || "companion-inc/bettercodex";
+  const repo = env.GITHUB_REPO || "companion-inc/bettercodex-plugins";
   const response = await fetch(`https://api.github.com/repos/${repo}/issues`, {
     method: "POST",
     headers: {

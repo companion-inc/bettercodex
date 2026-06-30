@@ -1,11 +1,10 @@
-export const ADDON_TYPES = Object.freeze(["plugin", "theme", "skill"]);
+export const ADDON_TYPES = Object.freeze(["plugin", "theme"]);
 
 export const DEFAULT_CATALOG_ENDPOINT = "https://bettercodex.companion.ai/api/addons";
 
 export const TAGS = Object.freeze({
   plugin: ["workflow", "chat", "ui", "developer", "automation", "utility"],
   theme: ["dark", "light", "contrast", "layout", "editor", "minimal"],
-  skill: ["authoring", "debugging", "research", "automation", "workflow", "deployment"],
 });
 
 // The marketplace launches empty — every mod comes from a community submission.
@@ -148,7 +147,7 @@ function normalizeDate(value) {
 }
 
 function assertFileName(type, fileName) {
-  const suffix = type === "theme" ? ".theme.css" : type === "plugin" ? ".plugin.js" : ".skill.json";
+  const suffix = type === "theme" ? ".theme.css" : ".plugin.js";
   if (!fileName.endsWith(suffix)) {
     throw new Error(`${type} fileName must end with ${suffix}`);
   }

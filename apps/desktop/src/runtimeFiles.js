@@ -622,17 +622,22 @@ function betterCodexFrameCSS() {
     "@media (max-width:900px){.bettercodex-card-grid{grid-template-columns:1fr}}",
     ".bettercodex-card{display:flex;min-height:63px;align-items:center;justify-content:center;border:0;border-radius:20px;padding:10px;gap:12px;color:var(--color-token-foreground,inherit);cursor:default}",
     ".bettercodex-card:hover{background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
+    ".bettercodex-market-card{min-height:86px;align-items:flex-start}",
     ".bettercodex-ico{width:44px!important;height:44px!important;margin-top:0;font-size:14px;font-weight:600;border-radius:12px;background:var(--color-token-foreground-5,rgba(255,255,255,.05))}",
     ".bettercodex-grow{min-width:0;flex:1}",
     ".bettercodex-card .bettercodex-grow{min-height:43px;justify-content:center;gap:1px!important}",
     ".bettercodex-name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:14px;line-height:20px;font-weight:500;color:var(--color-token-foreground,inherit);overflow:hidden}",
     ".bettercodex-desc{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;font-size:14px;line-height:18px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden}",
+    ".bettercodex-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}",
+    ".bettercodex-tags span{display:inline-flex;align-items:center;max-width:120px;height:20px;border-radius:999px;background:var(--color-token-foreground-5,rgba(255,255,255,.05));padding:0 7px;font-size:12px;line-height:16px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
     ".bettercodex-act{flex-shrink:0;display:flex;align-items:center;height:28px;border:1px solid var(--color-token-border-default,#ffffff1f);border-radius:12.5px;background:transparent;color:var(--color-token-foreground,inherit);padding:0 10px;font:inherit;font-size:14px;line-height:18px;cursor:pointer}",
     ".bettercodex-act:hover{background:var(--color-token-list-hover-background,#ffffff12)}",
     ".bettercodex-act.primary{background:var(--color-token-foreground-5,rgba(255,255,255,.05));border-color:transparent}",
     ".bettercodex-act:disabled{opacity:.5;cursor:default}",
     ".bettercodex-icon-act{width:28px;justify-content:center;padding:0}",
     ".bettercodex-actions{display:flex;align-self:center;align-items:center;gap:10px;flex-shrink:0}",
+    ".bettercodex-market-actions{display:flex;min-width:86px;align-items:flex-end;align-self:stretch;justify-content:space-between;flex-direction:column;gap:8px;flex-shrink:0}",
+    ".bettercodex-market-meta{max-width:120px;text-align:right;font-size:12px;line-height:16px;color:var(--color-token-description-foreground,var(--color-token-text-secondary,#9ca3af));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
     ".bettercodex-switch{position:relative;display:inline-flex;width:34px;height:20px;flex-shrink:0;align-items:center;border:0;border-radius:999px;background:var(--color-token-border-default,#ffffff24);padding:2px;cursor:pointer;transition:background-color .12s ease}",
     ".bettercodex-switch[aria-checked='true']{background:var(--color-token-foreground,#f4f4f5)}",
     ".bettercodex-switch span{display:block;width:16px;height:16px;border-radius:999px;background:var(--color-token-main-surface-primary,#141414);box-shadow:0 1px 2px #00000040;transform:translateX(0);transition:transform .12s ease}",
@@ -682,6 +687,8 @@ function rendererRuntimeSource() {
     plugins: new Map(),
     styles: new Map(),
     addons: {plugins: [], themes: []},
+    catalog: [],
+    catalogError: null,
   };
 
   const BdApi = createApi(runtime);
@@ -966,6 +973,20 @@ function rendererRuntimeSource() {
     }
   }
 
+  async function reloadCatalog() {
+    try {
+      const data = await native.fetchCatalog();
+      const list = Array.isArray(data) ? data : data && data.addons;
+      runtime.catalog = Array.isArray(list)
+        ? list.filter((addon) => addon && (addon.type === "plugin" || addon.type === "theme"))
+        : [];
+      runtime.catalogError = null;
+    } catch (error) {
+      runtime.catalog = [];
+      runtime.catalogError = error && error.message ? error.message : "Marketplace unavailable";
+    }
+  }
+
   async function startPlugin(plugin) {
     await native.runPlugin(plugin.fileName, plugin.name);
   }
@@ -1242,14 +1263,21 @@ function rendererRuntimeSource() {
 
   async function renderAddonPage(tab, token) {
     const content = runtime.content;
-    content.innerHTML = '<div class="bettercodex-empty"><span class="loading-shimmer-pure-text font-medium">Loading installed add-ons...</span></div>';
-    await reloadLocalAddons();
+    content.innerHTML = '<div class="bettercodex-empty"><span class="loading-shimmer-pure-text font-medium">Loading add-ons...</span></div>';
+    await Promise.all([reloadLocalAddons(), reloadCatalog()]);
     if (!isCurrentRender(token, tab)) return;
     const query = (runtime.query || "").toLowerCase();
     const isThemes = tab === "themes";
+    const type = isThemes ? "theme" : "plugin";
     const localAddons = isThemes ? runtime.addons.themes : runtime.addons.plugins;
     const local = localAddons.filter((addon) => {
       const haystack = [addon.name, addon.fileName, addon.author, addon.description].join(" ").toLowerCase();
+      return !query || haystack.includes(query);
+    });
+    const installedFiles = new Set(localAddons.map((addon) => addon.fileName));
+    const marketplace = runtime.catalog.filter((addon) => {
+      if (addon.type !== type) return false;
+      const haystack = [addon.name, addon.author, addon.description, ...(Array.isArray(addon.tags) ? addon.tags : [])].join(" ").toLowerCase();
       return !query || haystack.includes(query);
     });
     const installedLabel = "Installed";
@@ -1259,8 +1287,15 @@ function rendererRuntimeSource() {
       ? '<div class="bettercodex-card-grid">' + local.map(localCard).join("") + '</div>'
       : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' installed</div>';
     const installedCount = '<span class="bettercodex-count">' + String(local.length) + ' installed</span>';
+    const marketplaceBody = runtime.catalogError
+      ? '<div class="bettercodex-empty">' + escapeHtml(runtime.catalogError) + '</div>'
+      : marketplace.length
+        ? '<div class="bettercodex-card-grid">' + marketplace.map((addon, index) => marketplaceCard(addon, index, installedFiles.has(addon.fileName))).join("") + '</div>'
+        : '<div class="bettercodex-empty">No ' + escapeHtml(isThemes ? "themes" : "plugins") + ' in Marketplace</div>';
+    const marketplaceCount = '<span class="bettercodex-count">' + String(marketplace.length) + ' available</span>';
     content.innerHTML = '<div class="bettercodex-section-stack">' +
       section(installedLabel, installedBody, {accessory: installedCount + installedAccessory}) +
+      section("Marketplace", marketplaceBody, {accessory: marketplaceCount}) +
     '</div>';
     content.querySelector("[data-open-folder]")?.addEventListener("click", () => native.openFolder(tab === "themes" ? "theme" : "plugin"));
     content.querySelectorAll("[data-toggle]").forEach((button) => {
@@ -1268,6 +1303,23 @@ function rendererRuntimeSource() {
         await native.setEnabled(button.dataset.name, button.dataset.enabled !== "true");
         await reloadLocalAddons();
         renderCurrent();
+      });
+    });
+    content.querySelectorAll("[data-install]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const addon = marketplace[Number(button.dataset.install)];
+        if (!addon) return;
+        button.disabled = true;
+        button.textContent = "Installing";
+        try {
+          await native.installAddon(addon);
+          await reloadLocalAddons();
+          renderCurrent();
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "Install";
+          showToast(error && error.message ? error.message : "Install failed");
+        }
       });
     });
   }
@@ -1279,6 +1331,25 @@ function rendererRuntimeSource() {
       '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-1" title="' + escapeHtml(addon.fileName) + '"><div class="bettercodex-name">' + escapeHtml(addon.name) + '</div>' +
       '<div class="bettercodex-desc">' + escapeHtml(addon.description || (addon.enabled ? "Enabled" : "Disabled")) + '</div></div>' +
       toggle + '</div>';
+  }
+
+  function marketplaceCard(addon, index, installed) {
+    const tags = Array.isArray(addon.tags) ? addon.tags.slice(0, 2) : [];
+    const install = installed
+      ? '<button class="bettercodex-act" type="button" disabled>Installed</button>'
+      : '<button class="bettercodex-act primary" type="button" data-install="' + String(index) + '">Install</button>';
+    const meta = [addon.author ? "by " + addon.author : "", addon.version ? "v" + addon.version : ""].filter(Boolean).join(" - ");
+    return '<div class="bettercodex-card bettercodex-market-card group">' + iconTile(addon.name) +
+      '<div class="bettercodex-grow flex min-w-0 flex-1 flex-col gap-1">' +
+        '<div class="bettercodex-name">' + escapeHtml(addon.name || "Untitled") + '</div>' +
+        '<div class="bettercodex-desc">' + escapeHtml(addon.description || meta || "Community add-on") + '</div>' +
+        (tags.length ? '<div class="bettercodex-tags">' + tags.map((tag) => '<span>' + escapeHtml(tag) + '</span>').join("") + '</div>' : '') +
+      '</div>' +
+      '<div class="bettercodex-market-actions">' +
+        (meta ? '<div class="bettercodex-market-meta">' + escapeHtml(meta) + '</div>' : '') +
+        install +
+      '</div>' +
+    '</div>';
   }
 
   function folderIcon() {

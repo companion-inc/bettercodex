@@ -1,6 +1,6 @@
 import seed from "./catalog.seed.json";
 
-export type AddonType = "plugin" | "theme" | "skill";
+export type AddonType = "plugin" | "theme";
 
 export interface Addon {
   id: string;
@@ -26,12 +26,16 @@ export async function loadAddons(): Promise<Addon[]> {
     if (res.ok) {
       const data = await res.json();
       const list = Array.isArray(data) ? data : data.addons;
-      if (Array.isArray(list)) return list as Addon[];
+      if (Array.isArray(list)) return onlyRuntimeAddons(list);
     }
   } catch {
     // No Worker in local dev — fall back to the bundled seed.
   }
-  return SEED;
+  return onlyRuntimeAddons(SEED);
+}
+
+function onlyRuntimeAddons(list: unknown[]): Addon[] {
+  return (list as Addon[]).filter((addon) => addon.type === "plugin" || addon.type === "theme");
 }
 
 export const REPO_URL = "https://github.com/companion-inc/bettercodex";

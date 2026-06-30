@@ -8,7 +8,6 @@ import {
   Plus,
   Puzzle,
   Search,
-  Wand2,
 } from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -20,12 +19,11 @@ import {
   SUBMIT_URL,
 } from "@/lib/catalog";
 
-type TypeFilter = "all" | "plugin" | "theme" | "skill";
+type TypeFilter = "all" | "plugin" | "theme";
 type SortKey = "popular" | "newest" | "name";
 
 const TYPE_TABS: {key: TypeFilter; label: string}[] = [
   {key: "all", label: "All"},
-  {key: "skill", label: "Skills"},
   {key: "plugin", label: "Plugins"},
   {key: "theme", label: "Themes"},
 ];
@@ -39,9 +37,6 @@ const SORTS: {key: SortKey; label: string}[] = [
 function visual(addon: Addon) {
   if (addon.type === "theme") {
     return {Icon: Palette, fg: "#E7D9FF", bg: "#4A2F8F"};
-  }
-  if (addon.type === "skill") {
-    return {Icon: Wand2, fg: "#DBEAFE", bg: "#1E40AF"};
   }
   return {Icon: Puzzle, fg: "#FFFFFF", bg: "#0285ff"};
 }
@@ -121,7 +116,7 @@ function EmptyState() {
       </span>
       <h3 className="text-lg font-medium text-foreground">No plugins yet</h3>
       <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
-        Be the first to publish a plugin, theme, or skill for Codex. Plugins are
+        Be the first to publish a plugin or theme for Codex. Add-ons are
         added by opening a pull request to the community plugins repo — it's validated
         by CI and reviewed on GitHub.
       </p>
@@ -200,7 +195,7 @@ export default function App() {
             Plugins and themes for Codex
           </h1>
           <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted-foreground">
-            A community marketplace of plugins for the Codex desktop app. Browse,
+            A community marketplace of plugins and themes for the Codex desktop app. Browse,
             install in one click, and build your own.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">

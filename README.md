@@ -44,7 +44,7 @@ Desktop addons live in:
 ~/.codex/bettercodex/themes
 ```
 
-Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Plugins and Themes pages manage installed local files in those folders, with search, open-folder actions, installed status, and enable/disable switches. The hosted web/API surface is the distribution catalog; the desktop page stays an installed add-on manager.
+Plugins use `.plugin.js`. Themes use `.theme.css`. The in-Codex Plugins and Themes pages manage installed local files in those folders and include a Marketplace section for the same active type. Installing from Marketplace downloads the raw GitHub addon file into the local plugin/theme folder and enables it through the same local runtime path.
 
 ## Hosted Web/API
 
@@ -55,7 +55,7 @@ npm run web:dry-run
 npm run web:deploy
 ```
 
-`apps/web` is a Vite/React site using shadcn/ui components. It exports static assets to `apps/web/dist`. `apps/api` is the Cloudflare Worker that serves the hosted marketplace API for `/api/addons`, `/api/addons/:id`, and `/api/submit`.
+`apps/web` is a Vite/React site using shadcn/ui components. It exports static assets to `apps/web/dist`. `apps/api` is the Cloudflare Worker that serves the hosted marketplace API for `/api/addons`, `/api/addons/:id`, and `/api/submit`. The marketplace accepts desktop plugins and themes. Codex skills ship inside Codex-native plugin bundles instead of as standalone desktop marketplace add-ons.
 
 The desktop Plugins and Themes pages use the hosted API by default:
 
@@ -65,7 +65,7 @@ https://bettercodex-web.companion-inc.workers.dev/api/addons
 
 ## Codex Skill Pack
 
-The repo also contains `bettercodex-community`, a Codex-native plugin that exposes skills for creating and installing BetterCodex addons:
+The repo also contains `bettercodex-community`, a Codex-native plugin that exposes skills for creating BetterCodex plugins/themes and packaging Codex skills inside Codex-native plugin bundles:
 
 ```bash
 codex plugin marketplace add companion-inc/bettercodex --ref main

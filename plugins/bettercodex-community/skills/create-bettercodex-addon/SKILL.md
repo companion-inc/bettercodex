@@ -1,17 +1,17 @@
 ---
 name: create-bettercodex-addon
-description: Create BetterCodex plugins, themes, or Codex skills for marketplace submission.
+description: Create BetterCodex plugins and themes for marketplace submission, or Codex skills for a Codex-native plugin bundle.
 ---
 
 # Create BetterCodex Addon
 
-Use this skill when the user wants to create a BetterCodex addon.
+Use this skill when the user wants to create a BetterCodex desktop addon or package a Codex skill with a Codex-native plugin.
 
 ## Addon Types
 
 - Desktop plugin: `.plugin.js`, runs in the BetterCodex desktop runtime.
 - Desktop theme: `.theme.css`, injects CSS through the BetterCodex runtime.
-- Codex skill: `SKILL.md`, ships through a Codex-native plugin.
+- Codex skill: `SKILL.md`, ships inside a Codex-native plugin bundle. It is creator tooling or plugin-bundle content, not a desktop marketplace addon.
 
 ## Required Metadata
 
@@ -60,3 +60,4 @@ Plugins must export an object or class with `start()` and `stop()`.
 - Host downloadable desktop addons as raw GitHub HTTPS files.
 - Include name, type, author, version, description, file name, and download URL.
 - Keep desktop UI changes scoped to Codex surfaces and avoid destructive filesystem actions.
+- Publish Codex skills by publishing the Codex-native plugin bundle that contains them; do not submit a standalone `SKILL.md` as a BetterCodex desktop marketplace addon.

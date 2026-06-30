@@ -15,8 +15,10 @@ BetterCodex is organized as a single repo with separate runtimes.
 The product vocabulary is:
 
 - In-app surfaces: Plugins and Themes.
-- Hosted surface: web/API.
+- In-app sections inside each surface: Installed and Marketplace.
+- Hosted surface: web/API for the shared Marketplace catalog.
 - Generic description: community marketplace/catalog.
+- Skills are creator tooling or content inside Codex-native plugin bundles, not a third BetterCodex desktop marketplace type.
 
 ## Verification
 
@@ -96,3 +98,15 @@ Results:
 - Current local checks passed after the installed-app rename: `npm test` (22 tests), `npm run check`, and `git diff --check`.
 - Commit `09da24d` was pushed to `companion-inc/bettercodex` `main`, and GitHub Actions run `28417317492` passed.
 - BetterCodex now generates its own app icon during bundling: `CFBundleIconFile` is `bettercodex.icns`, the installed icon file exists at `/Applications/BetterCodex.app/Contents/Resources/bettercodex.icns`, and Quick Look rendered the preview with a teal-tinted Codex base plus a large plugin-grid accessory badge.
+
+Current marketplace architecture update:
+
+- Desktop Plugins/Themes pages now render both `Installed` and `Marketplace` sections under the active top-level tab; there is no top-level Store or Skills tab.
+- Marketplace entries are filtered to desktop runtime types (`plugin` and `theme`) at the hosted API, web client, and desktop client, then install through the existing raw-GitHub download path into `~/.codex/bettercodex/plugins` or `~/.codex/bettercodex/themes`.
+- The public website and shared catalog schema no longer expose standalone `skill` as a marketplace addon type.
+- The creator skill now describes Codex skills as content packaged through Codex-native plugin bundles, while plugins/themes remain the desktop marketplace submission types.
+- Submission issues default to `companion-inc/bettercodex-plugins`, matching the registry that serves `catalog.json`.
+- Current checks passed after the marketplace architecture update: `npm test` (25 tests), `npm run check`, `git diff --check`, `npm run web:dry-run`, and `npm run web:deploy`.
+- Cloudflare Worker/static site deployed to `https://bettercodex-web.companion-inc.workers.dev`, version `f7f89338-83eb-401d-be4f-73a5ccba1284`; live `/api/addons` returned one theme, `Focus Contrast`, and `hasSkill: false`.
+- `/Applications/BetterCodex.app` was refreshed with `npm run desktop -- install --launch=false`; bundle id remains `com.openai.codex.bettercodex`.
+- Disposable CDP smoke against `/tmp/Codex-BetterCodex-MarketplaceSmoke.app` verified top-level tabs `Plugins`/`Themes`, no `Skills`/`Store` text inside BetterCodex, Marketplace under both active surfaces, `Focus Contrast` install from Themes Marketplace, and local file write to `/tmp/bettercodex-marketplace-smoke-home/themes/focus-contrast.theme.css`.

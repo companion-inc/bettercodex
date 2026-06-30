@@ -33,6 +33,18 @@ test("submission validation requires raw GitHub downloads", () => {
   }), /raw GitHub/);
 });
 
+test("submission validation rejects standalone skills", () => {
+  assert.throws(() => validateSubmission({
+    author: "Companion",
+    description: "Standalone skills ship through Codex-native plugin bundles.",
+    downloadUrl: "https://raw.githubusercontent.com/companion-inc/bettercodex-plugins/main/skills/example.skill.json",
+    fileName: "example.skill.json",
+    name: "Example Skill",
+    type: "skill",
+    version: "0.1.0",
+  }), /Unsupported addon type/);
+});
+
 test("slugify produces stable catalog ids", () => {
   assert.equal(slugify("Focus Contrast!"), "focus-contrast");
 });
