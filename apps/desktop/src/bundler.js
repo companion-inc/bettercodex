@@ -13,6 +13,7 @@ function createBundle(options = {}) {
   const installRoot = options.installRoot || defaultInstallRoot;
   const name = normalizeName(options.name || "BetterCodex");
   const slug = slugify(name);
+  const bundleId = bundleIdentifierForSlug(slug);
   const destination = options.destination
     ? path.resolve(options.destination)
     : defaultDestination(appRoot, name);
@@ -24,7 +25,7 @@ function createBundle(options = {}) {
     if (!options.replace) {
       throw new Error(`Destination exists: ${destination}. Rerun with --replace to overwrite it.`);
     }
-    quitBundle(`com.openai.codex.${slug}`, destination);
+    quitBundle(bundleId, destination);
     fs.rmSync(destination, {force: true, recursive: true});
   }
 
@@ -41,7 +42,7 @@ function createBundle(options = {}) {
   const infoPlist = path.join(destination, "Contents", "Info.plist");
   setPlist(infoPlist, "CFBundleDisplayName", name);
   setPlist(infoPlist, "CFBundleName", name);
-  setPlist(infoPlist, "CFBundleIdentifier", `com.openai.codex.${slug}`);
+  setPlist(infoPlist, "CFBundleIdentifier", bundleId);
   if (installBetterCodexIcon(destination)) {
     setPlist(infoPlist, "CFBundleIconFile", "bettercodex.icns");
   }
@@ -53,7 +54,7 @@ function createBundle(options = {}) {
   }
 
   return {
-    bundleId: `com.openai.codex.${slug}`,
+    bundleId,
     destination,
     installResult: result,
     userDataDir: userDataDir(name),
@@ -85,6 +86,10 @@ function slugify(name) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .replace(/-+/g, "-") || "bettercodex";
+}
+
+function bundleIdentifierForSlug(slug) {
+  return `com.companion.${slug || "bettercodex"}`;
 }
 
 function quitBundle(bundleId, destination) {
@@ -221,6 +226,7 @@ function signAndVerify(destination) {
 
 module.exports = {
   betterCodexIconPython,
+  bundleIdentifierForSlug,
   createBundle,
   defaultDestination,
   normalizeName,

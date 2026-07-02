@@ -222,12 +222,15 @@ function assertCodexApp(paths) {
   }
   const bundleId = readPlistValue(paths.infoPlistPath, "CFBundleIdentifier");
   if (!isCodexBundleIdentifier(bundleId)) {
-    throw new Error(`Expected com.openai.codex or com.openai.codex.<name>, found ${bundleId || "unknown bundle id"}`);
+    throw new Error(`Expected com.openai.codex or a supported BetterCodex sibling id, found ${bundleId || "unknown bundle id"}`);
   }
 }
 
 function isCodexBundleIdentifier(bundleId) {
-  return bundleId === "com.openai.codex" || String(bundleId || "").startsWith("com.openai.codex.");
+  const value = String(bundleId || "");
+  return value === "com.openai.codex"
+    || value.startsWith("com.openai.codex.")
+    || value === "com.companion.bettercodex";
 }
 
 function backupAppState(paths, installRoot, metadata) {

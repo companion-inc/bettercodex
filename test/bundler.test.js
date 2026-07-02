@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
   betterCodexIconPython,
+  bundleIdentifierForSlug,
   defaultDestination,
   normalizeName,
   slugify,
@@ -30,6 +31,10 @@ test("default BetterCodex bundle path is not Codex-prefixed", () => {
 
 test("default BetterCodex user data path is not Codex-prefixed", () => {
   assert.match(userDataDir("BetterCodex"), /\/Library\/Application Support\/BetterCodex$/);
+});
+
+test("BetterCodex bundle id is Companion-owned", () => {
+  assert.equal(bundleIdentifierForSlug(slugify("BetterCodex")), "com.companion.bettercodex");
 });
 
 test("BetterCodex icon generator resizes the generated app icon asset", () => {

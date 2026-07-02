@@ -159,7 +159,11 @@ function assertCodexApp(paths) {
   if (!fs.existsSync(paths.asarPath)) throw new Error("Codex app.asar not found: " + paths.asarPath);
   if (!fs.existsSync(paths.infoPlistPath)) throw new Error("Codex Info.plist not found: " + paths.infoPlistPath);
   const bundleId = readPlistValue(paths.infoPlistPath, "CFBundleIdentifier");
-  if (bundleId !== "com.openai.codex" && !String(bundleId || "").startsWith("com.openai.codex.")) {
+  if (
+    bundleId !== "com.openai.codex"
+    && !String(bundleId || "").startsWith("com.openai.codex.")
+    && bundleId !== "com.companion.bettercodex"
+  ) {
     throw new Error("Expected Codex bundle id, found " + (bundleId || "unknown"));
   }
 }
