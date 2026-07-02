@@ -46,5 +46,5 @@ test("submission validation rejects standalone skills", () => {
 });
 
 test("slugify produces stable catalog ids", () => {
-  assert.equal(slugify("Focus Contrast!"), "focus-contrast");
+  assert.equal(slugify("Example Theme!"), "example-theme");
 });

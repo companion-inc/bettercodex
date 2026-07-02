@@ -139,12 +139,8 @@ function installLauncherWrapper(destination, userDataName) {
 
 function installBetterCodexIcon(destination) {
   const resourcesDir = path.join(destination, "Contents", "Resources");
-  const source = [
-    path.join(resourcesDir, "icon-codex-dark-color.png"),
-    path.join(resourcesDir, "icon.png"),
-    path.join(resourcesDir, "default_app", "icon.png"),
-  ].find((candidate) => fs.existsSync(candidate));
-  if (!source) return false;
+  const source = path.join(__dirname, "..", "assets", "bettercodex-icon.png");
+  if (!fs.existsSync(source)) return false;
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bettercodex-icon-"));
   const iconset = path.join(tempDir, "bettercodex.iconset");
@@ -170,49 +166,13 @@ function betterCodexIconPython() {
   return String.raw`
 import os
 import sys
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 source, iconset = sys.argv[1], sys.argv[2]
 base = Image.open(source).convert("RGBA")
 
-def rounded(draw, box, radius, fill, outline=None, width=1):
-    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
-
 def compose(size):
-    icon = base.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
-    tint = Image.new("RGBA", (size, size), (20, 198, 170, 0))
-    mask = icon.getchannel("A").point(lambda value: int(value * 0.34))
-    tint.putalpha(mask)
-    icon = Image.alpha_composite(icon, tint)
-    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    badge = (
-        int(size * 0.47),
-        int(size * 0.49),
-        int(size * 0.96),
-        int(size * 0.96),
-    )
-    radius = max(3, int(size * 0.12))
-    rounded(sd, badge, radius, (0, 0, 0, 150))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(max(1, size // 48)))
-    icon.alpha_composite(shadow)
-
-    draw = ImageDraw.Draw(icon)
-    rounded(draw, badge, radius, (20, 198, 170, 255), (244, 255, 252, 245), max(1, size // 42))
-
-    pad = max(2, int(size * 0.09))
-    gap = max(1, int(size * 0.032))
-    left = badge[0] + pad
-    top = badge[1] + pad
-    tile = max(2, int((badge[2] - badge[0] - (2 * pad) - gap) / 2))
-    tile_radius = max(1, int(tile * 0.28))
-    tile_fill = (5, 21, 25, 230)
-    for row in range(2):
-        for col in range(2):
-            x = left + col * (tile + gap)
-            y = top + row * (tile + gap)
-            rounded(draw, (x, y, x + tile, y + tile), tile_radius, tile_fill)
-    return icon
+    return base.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
 
 outputs = [
     ("icon_16x16.png", 16),

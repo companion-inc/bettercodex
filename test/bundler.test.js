@@ -32,9 +32,9 @@ test("default BetterCodex user data path is not Codex-prefixed", () => {
   assert.match(userDataDir("BetterCodex"), /\/Library\/Application Support\/BetterCodex$/);
 });
 
-test("BetterCodex icon generator adds an accessory badge", () => {
+test("BetterCodex icon generator resizes the generated app icon asset", () => {
   const source = betterCodexIconPython();
-  assert.match(source, /20, 198, 170/);
-  assert.match(source, /0\.34/);
+  assert.match(source, /Image\.open\(source\)\.convert\("RGBA"\)/);
+  assert.match(source, /Image\.Resampling\.LANCZOS/);
   assert.match(source, /icon_512x512@2x\.png/);
 });
