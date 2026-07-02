@@ -153,6 +153,19 @@ function installBetterCodexIcon(destination) {
     childProcess.execFileSync("/usr/bin/iconutil", ["-c", "icns", iconset, "-o", iconPath], {
       stdio: "inherit",
     });
+    for (const filename of ["icon.icns", "electron.icns", "app.icns"]) {
+      fs.copyFileSync(iconPath, path.join(resourcesDir, filename));
+    }
+    for (const filename of ["icon.png", "icon-codex-dark-color.png", "icon-codex-light.png"]) {
+      const target = path.join(resourcesDir, filename);
+      if (fs.existsSync(target)) {
+        fs.copyFileSync(source, target);
+      }
+    }
+    const defaultAppIcon = path.join(resourcesDir, "default_app", "icon.png");
+    if (fs.existsSync(defaultAppIcon)) {
+      fs.copyFileSync(source, defaultAppIcon);
+    }
     return fs.existsSync(iconPath);
   } catch (error) {
     console.warn(`BetterCodex icon generation skipped: ${error.message}`);
